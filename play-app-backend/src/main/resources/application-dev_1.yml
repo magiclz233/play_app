@@ -1,0 +1,15 @@
+spring:
+  # 数据库连接配置 (PostgreSQL)
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/play_app
+    username: postgres
+    password: qwerwasd*963.
+    
+  # Redis 配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      database: 0
+      password: 
