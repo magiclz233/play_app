@@ -1,0 +1,72 @@
+/**
+ * 自定义设计变量 (Premium Theme)
+ * 采用深色/浅色高对比度现代感配色方案
+ */
+
+/* 主题色彩 */
+$color-primary: #7C3AED;      /* 主色调：神秘高贵紫 */
+$color-primary-light: #8B5CF6;
+$color-primary-dark: #6D28D9;
+$color-secondary: #EC4899;    /* 辅色调：活力粉色 (搭配紫色做渐变) */
+$color-success: #10B981;
+$color-warning: #F59E0B;
+$color-error: #EF4444;
+
+/* 渐变色 */
+$gradient-primary: linear-gradient(135deg, $color-primary, $color-secondary);
+
+/* 文字颜色 */
+$text-color-primary: #1F2937;   /* 主标题颜色 (深灰黑) */
+$text-color-regular: #4B5563;   /* 正文颜色 */
+$text-color-secondary: #9CA3AF; /* 辅助文字/时间戳 */
+$text-color-placeholder: #D1D5DB;/* 占位符颜色 */
+
+/* 背景颜色 */
+$bg-color-page: #F3F4F6;        /* 页面整体背景 (极浅灰) */
+$bg-color-white: #FFFFFF;       /* 卡片背景纯白 */
+$bg-color-hover: #F9FAFB;       /* 悬停/点击反馈背景 */
+
+/* 边框与分割线 */
+$border-color: #E5E7EB;
+$border-color-light: #F3F4F6;
+
+/* 圆角大小 */
+$border-radius-sm: 8rpx;
+$border-radius-md: 16rpx;
+$border-radius-lg: 24rpx;
+$border-radius-xl: 32rpx;
+$border-radius-pill: 999rpx;
+
+/* 阴影效果 (高级玻璃态感) */
+$box-shadow-sm: 0 2rpx 4rpx rgba(0, 0, 0, 0.05);
+$box-shadow-md: 0 4rpx 12rpx rgba(0, 0, 0, 0.08);
+$box-shadow-lg: 0 10rpx 24rpx rgba(0, 0, 0, 0.12);
+
+/* 字号 */
+$font-size-xs: 20rpx;
+$font-size-sm: 24rpx;
+$font-size-base: 28rpx;
+$font-size-lg: 32rpx;
+$font-size-xl: 36rpx;
+$font-size-xxl: 48rpx;
+
+/* 间距 */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
+
+/* z-index */
+$z-index-normal: 1;
+$z-index-sticky: 100;
+$z-index-modal: 1000;
+
+/* uni-app 原生变量覆盖 (如果需要) */
+$uni-color-primary: $color-primary;
+$uni-color-success: $color-success;
+$uni-color-warning: $color-warning;
+$uni-color-error: $color-error;
+$uni-text-color: $text-color-primary;
+$uni-bg-color-grey: $bg-color-page;
+$uni-border-radius-base: $border-radius-md;

@@ -1,0 +1,72 @@
+# ==============================
+# IDE & Editor
+# ==============================
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.classpath
+.settings/
+*.sublime-*
+
+# ==============================
+# OS
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# ==============================
+# Java / Maven Backend
+# ==============================
+play-app-backend/target/
+play-app-backend/logs/
+*.class
+*.jar
+*.war
+!play-app-backend/src/main/resources/cert/*.pem
+
+# Maven wrapper (keep mvnw if present)
+!play-app-backend/.mvn/
+
+# ==============================
+# Node / Frontend
+# ==============================
+play-app-frontend/node_modules/
+play-app-frontend/dist/
+play-app-frontend/.uni/
+play-app-frontend/unpackage/
+
+# pnpm
+play-app-frontend/.pnpm-store/
+
+# ==============================
+# Environment & Secrets
+# ==============================
+*.log
+.env
+.env.local
+.env.*.local
+application-local.yml
+*-local.properties
+
+# Certificates (private keys)
+*.p12
+*.pfx
+*.jks
+*.keystore
+play-app-backend/src/main/resources/cert/apiclient_key.pem
+
+# ==============================
+# Uploads / Runtime data
+# ==============================
+uploads/
+play-app-backend/uploads/
+
+# ==============================
+# Claude
+# ==============================
+.claude/

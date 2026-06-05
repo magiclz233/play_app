@@ -1,0 +1,119 @@
+{
+	"pages": [
+		{
+			"path": "pages/index/index",
+			"style": {
+				"navigationBarTitleText": "同城伴玩",
+				"navigationBarBackgroundColor": "#FFFFFF",
+				"navigationBarTextStyle": "black",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/order/list",
+			"style": {
+				"navigationBarTitleText": "我的订单",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/mine/index",
+			"style": {
+				"navigationBarTitleText": "个人中心",
+				"navigationStyle": "custom"
+			}
+		},
+		{
+			"path": "pages/companion/list",
+			"style": {
+				"navigationBarTitleText": "助教大厅",
+				"enablePullDownRefresh": true
+			}
+		},
+		{
+			"path": "pages/companion/detail",
+			"style": {
+				"navigationBarTitleText": "助教详情",
+				"navigationStyle": "custom",
+				"transparentTitle": "always"
+			}
+		},
+		{
+			"path": "pages/companion/apply",
+			"style": {
+				"navigationBarTitleText": "助教入驻"
+			}
+		},
+		{
+			"path": "pages/companion/dashboard",
+			"style": {
+				"navigationBarTitleText": "助教工作台"
+			}
+		},
+		{
+			"path": "pages/companion/wallet",
+			"style": {
+				"navigationBarTitleText": "我的钱包"
+			}
+		},
+		{
+			"path": "pages/order/create",
+			"style": {
+				"navigationBarTitleText": "确认订单"
+			}
+		},
+		{
+			"path": "pages/order/pay",
+			"style": {
+				"navigationBarTitleText": "订单支付"
+			}
+		},
+		{
+			"path": "pages/order/detail",
+			"style": {
+				"navigationBarTitleText": "订单详情"
+			}
+		},
+		{
+			"path": "pages/order/review",
+			"style": {
+				"navigationBarTitleText": "评价"
+			}
+		},
+		{
+			"path": "pages/admin/index",
+			"style": {
+				"navigationBarTitleText": "管理后台"
+			}
+		}
+	],
+	"globalStyle": {
+		"navigationBarTextStyle": "black",
+		"navigationBarTitleText": "同城伴玩",
+		"navigationBarBackgroundColor": "#F3F4F6",
+		"backgroundColor": "#F3F4F6",
+		"app-plus": {
+			"background": "#F3F4F6"
+		}
+	},
+	"tabBar": {
+		"color": "#9CA3AF",
+		"selectedColor": "#7C3AED",
+		"backgroundColor": "#FFFFFF",
+		"borderStyle": "black",
+		"list": [
+			{
+				"pagePath": "pages/index/index",
+				"text": "大厅"
+			},
+			{
+				"pagePath": "pages/order/list",
+				"text": "订单"
+			},
+			{
+				"pagePath": "pages/mine/index",
+				"text": "我的"
+			}
+		]
+	}
+}
