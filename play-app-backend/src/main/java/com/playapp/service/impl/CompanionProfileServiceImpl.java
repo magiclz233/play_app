@@ -27,8 +27,11 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -63,6 +66,13 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
         CompanionProfile profile = new CompanionProfile();
         profile.setUserId(userId);
         profile.setRealName(dto.getRealName());
+        profile.setNickname(dto.getNickname());
+        // 首次申请自动生成助教号码（驳回重申请保留原号）
+        if (existingProfile == null || existingProfile.getCompanionCode() == null) {
+            profile.setCompanionCode(generateCompanionCode());
+        } else {
+            profile.setCompanionCode(existingProfile.getCompanionCode());
+        }
         profile.setWechatCode(dto.getWechatCode());
         profile.setGender(dto.getGender());
         profile.setAge(dto.getAge());
@@ -231,6 +241,9 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
     }
 
     private String getNickname(CompanionProfile profile) {
+        if (profile.getNickname() != null && !profile.getNickname().isEmpty()) {
+            return profile.getNickname();
+        }
         User user = userMapper.selectById(profile.getUserId());
         if (user != null && user.getNickname() != null) {
             return user.getNickname();
@@ -256,5 +269,116 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
         List<Integer> tagIds = relations.stream().map(CompanionTagRelation::getTagId).collect(Collectors.toList());
         List<Tag> tags = tagMapper.selectBatchIds(tagIds);
         return tags.stream().map(Tag::getName).collect(Collectors.toList());
+    }
+
+    // ===== 助教号码自动生成 =====
+
+    private static final SecureRandom RANDOM = new SecureRandom();
+
+    /**
+     * 生成 7 位助教号码，自动过滤靓号，检查唯一性
+     */
+    private String generateCompanionCode() {
+        int maxRetries = 50;
+        for (int i = 0; i < maxRetries; i++) {
+            // 1000000 ~ 9999999 (7位)
+            String code = String.valueOf(1_000_000 + RANDOM.nextInt(9_000_000));
+            if (isPremiumNumber(code)) continue;
+            if (existsCompanionCode(code)) continue;
+            return code;
+        }
+        // 兜底：8位随机
+        for (int i = 0; i < maxRetries; i++) {
+            String code = String.valueOf(10_000_000 + RANDOM.nextInt(90_000_000));
+            if (isPremiumNumber(code)) continue;
+            if (existsCompanionCode(code)) continue;
+            return code;
+        }
+        // 极端情况：时间戳兜底
+        return String.valueOf(System.currentTimeMillis()).substring(5);
+    }
+
+    /**
+     * 判断是否为靓号（不自动分配，留给后期售卖）
+     */
+    private boolean isPremiumNumber(String code) {
+        char[] c = code.toCharArray();
+        int len = c.length;
+
+        // 全相同: 1111111, 8888888
+        if (allSame(c)) return true;
+
+        // 顺子（正序/倒序）: 1234567, 7654321
+        if (isSequential(c)) return true;
+
+        // 回文: 1234321
+        if (isPalindrome(c)) return true;
+
+        // AABB 模式: 1122334
+        if (hasAabbPattern(c)) return true;
+
+        // 含 3 个以上相同数字: 8881234, 1238888
+        int maxConsecutive = 1, current = 1;
+        for (int i = 1; i < len; i++) {
+            if (c[i] == c[i - 1]) {
+                current++;
+                maxConsecutive = Math.max(maxConsecutive, current);
+            } else {
+                current = 1;
+            }
+        }
+        if (maxConsecutive >= 3) return true;
+
+        // 豹子号（含 4 个以上相同数字，不论位置）: 1818181
+        int[] count = new int[10];
+        for (char ch : c) count[ch - '0']++;
+        for (int cnt : count) {
+            if (cnt >= 4) return true;
+        }
+
+        // ABAB 模式: 1212121
+        if (isAbabPattern(c)) return true;
+
+        return false;
+    }
+
+    private boolean allSame(char[] c) {
+        for (int i = 1; i < c.length; i++)
+            if (c[i] != c[0]) return false;
+        return true;
+    }
+
+    private boolean isSequential(char[] c) {
+        int asc = 1, desc = 1;
+        for (int i = 1; i < c.length; i++) {
+            if (c[i] == c[i - 1] + 1) asc++;
+            if (c[i] == c[i - 1] - 1) desc++;
+        }
+        return asc == c.length || desc == c.length;
+    }
+
+    private boolean isPalindrome(char[] c) {
+        for (int i = 0; i < c.length / 2; i++)
+            if (c[i] != c[c.length - 1 - i]) return false;
+        return true;
+    }
+
+    private boolean hasAabbPattern(char[] c) {
+        for (int i = 0; i < c.length - 3; i++) {
+            if (c[i] == c[i + 1] && c[i + 2] == c[i + 3] && c[i] != c[i + 2]) return true;
+        }
+        return false;
+    }
+
+    private boolean isAbabPattern(char[] c) {
+        for (int i = 0; i < c.length - 3; i++) {
+            if (c[i] == c[i + 2] && c[i + 1] == c[i + 3] && c[i] != c[i + 1]) return true;
+        }
+        return false;
+    }
+
+    private boolean existsCompanionCode(String code) {
+        return this.count(new LambdaQueryWrapper<CompanionProfile>()
+                .eq(CompanionProfile::getCompanionCode, code)) > 0;
     }
 }

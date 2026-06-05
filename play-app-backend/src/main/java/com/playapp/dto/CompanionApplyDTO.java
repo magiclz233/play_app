@@ -15,6 +15,11 @@ public class CompanionApplyDTO {
     @NotBlank(message = "真实姓名不能为空")
     private String realName;
 
+    @NotBlank(message = "昵称不能为空")
+    private String nickname;
+
+    private String companionCode; // 后端自动生成
+
     @NotBlank(message = "微信号不能为空")
     private String wechatCode;
 

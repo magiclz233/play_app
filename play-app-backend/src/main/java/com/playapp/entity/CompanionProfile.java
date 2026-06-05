@@ -25,6 +25,12 @@ public class CompanionProfile implements Serializable {
 
     private String realName;
 
+    /** 对外展示昵称 */
+    private String nickname;
+
+    /** 助教号码（客户可通过此号码搜索） */
+    private String companionCode;
+
     /** 身份证号（加密存储） */
     private String idCardNo;
 

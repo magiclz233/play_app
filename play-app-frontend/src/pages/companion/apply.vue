@@ -15,7 +15,16 @@
       <view class="form-group">
         <view class="form-item">
           <text class="label">真实姓名</text>
-          <input type="text" v-model="formData.realName" placeholder="请输入真实姓名 (不对外展示)" />
+          <input type="text" v-model="formData.realName" placeholder="身份证姓名 (不对外展示)" />
+        </view>
+        <view class="form-item">
+          <text class="label">对外昵称</text>
+          <input type="text" v-model="formData.nickname" placeholder="客户看到的名称" />
+        </view>
+        <view class="form-item" v-if="applyStatus !== -1 && existingCode">
+          <text class="label">你的助教号</text>
+          <view class="code-display">{{ existingCode }}</view>
+          <text class="code-tip">客户可通过此号码搜索到你</text>
         </view>
         <view class="form-item">
           <text class="label">微信号</text>
@@ -111,15 +120,18 @@ const UPLOAD_URL = 'http://127.0.0.1:8080/api/file/upload';
 
 const applyStatus = ref(-1); // -1: 未申请, 0: 待审核, 1: 通过, 2: 驳回
 const rejectReason = ref('');
+const existingCode = ref('');
 
 const formData = ref({
   realName: '',
+  nickname: '',
+  companionCode: '',
   wechatCode: '',
   gender: null as number | null,
   age: '',
   height: '',
   summary: '',
-  tagIds: [1], // Mock tag selection for MVP
+  tagIds: [1],
   pricePerHour: '',
   photoUrls: [] as string[],
   voiceUrl: '',
@@ -309,6 +321,7 @@ const fetchApplyStatus = async () => {
     if (res.code === 200 && res.data) {
       applyStatus.value = res.data.auditStatus;
       rejectReason.value = res.data.rejectReason || '';
+      existingCode.value = res.data.companionCode || '';
       
       // 回显数据 (驳回时方便修改)
       if (applyStatus.value === 2) {
@@ -322,11 +335,11 @@ const fetchApplyStatus = async () => {
 
 const submitApply = async () => {
   if (!formData.value.realName) return uni.showToast({ title: '请输入真实姓名', icon: 'none' });
+  if (!formData.value.nickname) return uni.showToast({ title: '请输入对外昵称', icon: 'none' });
   if (!formData.value.wechatCode) return uni.showToast({ title: '请输入微信号', icon: 'none' });
   if (!formData.value.gender) return uni.showToast({ title: '请选择性别', icon: 'none' });
   if (!formData.value.pricePerHour) return uni.showToast({ title: '请输入价格', icon: 'none' });
   if (formData.value.photoUrls.length === 0) return uni.showToast({ title: '请至少上传一张照片', icon: 'none' });
-  if (!formData.value.voiceUrl) return uni.showToast({ title: '请录制语音介绍', icon: 'none' });
 
   isSubmitting.value = true;
   try {
@@ -660,5 +673,18 @@ onMounted(() => {
   0% { height: 10rpx; }
   50% { height: 30rpx; }
   100% { height: 10rpx; }
+}
+.code-display {
+  font-size: 48rpx;
+  font-weight: bold;
+  color: $color-primary;
+  letter-spacing: 8rpx;
+  padding: 12rpx 0;
+}
+.code-tip {
+  font-size: 22rpx;
+  color: $text-color-secondary;
+  display: block;
+  margin-top: 6rpx;
 }
 </style>
