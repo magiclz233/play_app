@@ -85,6 +85,7 @@ const noMore = ref(false);
 const isRefreshing = ref(false);
 const currentSort = ref('recommend');
 const categoryId = ref<string | null>(null);
+const showGenderPicker = ref(false);
 
 onLoad((options: any) => {
   categoryId.value = options?.categoryId || null;

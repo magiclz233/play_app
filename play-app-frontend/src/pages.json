@@ -81,6 +81,12 @@
 			}
 		},
 		{
+			"path": "pages/order/refund",
+			"style": {
+				"navigationBarTitleText": "申请退款"
+			}
+		},
+		{
 			"path": "pages/admin/index",
 			"style": {
 				"navigationBarTitleText": "管理后台"

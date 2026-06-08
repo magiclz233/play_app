@@ -3,9 +3,9 @@
     <view class="tabs">
       <view class="tab" :class="{ active: currentTab === '' }" @click="switchTab('')">全部</view>
       <view class="tab" :class="{ active: currentTab === '10' }" @click="switchTab('10')">待支付</view>
-      <view class="tab" :class="{ active: currentTab === '20' }" @click="switchTab('20')">待接单</view>
-      <view class="tab" :class="{ active: currentTab === '30' }" @click="switchTab('30')">进行中</view>
-      <view class="tab" :class="{ active: currentTab === '70' }" @click="switchTab('70')">待评价</view>
+      <view class="tab" :class="{ active: currentTab === '20' }" @click="switchTab('20')">待服务</view>
+      <view class="tab" :class="{ active: currentTab === '50' }" @click="switchTab('50')">服务中</view>
+      <view class="tab" :class="{ active: currentTab === '80' }" @click="switchTab('80')">已完成</view>
     </view>
 
     <scroll-view scroll-y class="list-content" @scrolltolower="loadMore" :refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onRefresh">
@@ -19,8 +19,9 @@
           <view class="card-body">
             <view class="service-info">
               <view class="title">同城伴玩服务</view>
-              <view class="time">预约: {{ item.reserveDate }} {{ item.reserveTimeStart }}</view>
+              <view class="time">预约: {{ item.reserveDate }} {{ item.reserveTimeStart }}{{ item.reserveTimeEnd ? '-' + item.reserveTimeEnd : '' }}</view>
               <view class="duration">时长: {{ item.hours }} 小时</view>
+              <view class="duration" v-if="item.address">地址: {{ item.address }}</view>
             </view>
             <view class="price-info">
               <text class="label">实付款</text>
@@ -28,10 +29,11 @@
             </view>
           </view>
 
-          <view class="card-footer" v-if="item.status === 10 || item.status === 30 || item.status === 70">
+          <view class="card-footer" v-if="hasActions(item.status)">
             <button class="action-btn" v-if="item.status === 10" @click.stop="goToPay(item)">去支付</button>
-            <button class="action-btn primary" v-if="item.status === 30" @click.stop="confirmOrder(item.orderNo)">确认完工</button>
-            <button class="action-btn" v-if="item.status === 70" @click.stop="goToReview(item.orderNo)">去评价</button>
+            <button class="action-btn" v-if="canRefund(item.status)" @click.stop="goToRefund(item.orderNo)">申请退款</button>
+            <button class="action-btn primary" v-if="item.status === 60" @click.stop="confirmOrder(item.orderNo)">确认完工</button>
+            <button class="action-btn primary" v-if="item.status === 70 || item.status === 80" @click.stop="goToReview(item.orderNo)">去评价</button>
           </view>
         </view>
       </view>
@@ -117,16 +119,11 @@ const loadMore = () => {
 
 const getStatusText = (status: number) => {
   const map: Record<number, string> = {
-    10: '待付款', 20: '待接单', 30: '已接单', 40: '已确认',
-    50: '服务中', 60: '待确认', 70: '待评价', 80: '已完成',
-    100: '取消中', 120: '已退款', 250: '已关闭'
+    10: '待付款', 20: '待拉群', 30: '已拉群', 40: '双方确认',
+    50: '服务中', 60: '待确认', 70: '待评价/待结算', 80: '已完成',
+    100: '退款申请中', 110: '退款处理中', 120: '已退款', 130: '部分退款', 250: '已关闭'
   };
   return map[status] || '未知';
-};
-
-const formatTime = (timeStr: string) => {
-  if (!timeStr) return '';
-  return timeStr.replace('T', ' ').substring(0, 16);
 };
 
 const goToDetail = (orderNo: string) => {
@@ -140,7 +137,7 @@ const goToPay = (item: any) => {
 const confirmOrder = (orderNo: string) => {
   uni.showModal({
     title: '确认完工',
-    content: '确认服务已经完成了吗？确认后款项将打给搭子。',
+    content: '确认服务已经完成了吗？确认后平台将进入结算流程。',
     success: async (res) => {
       if (res.confirm) {
         const confirmRes = await request({
@@ -159,6 +156,13 @@ const confirmOrder = (orderNo: string) => {
 const goToReview = (orderNo: string) => {
   uni.navigateTo({ url: `/pages/order/review?orderNo=${orderNo}` });
 };
+
+const goToRefund = (orderNo: string) => {
+  uni.navigateTo({ url: `/pages/order/refund?orderNo=${orderNo}` });
+};
+
+const canRefund = (status: number) => [20, 30, 40, 50, 60].includes(status);
+const hasActions = (status: number) => status === 10 || status === 60 || status === 70 || status === 80 || canRefund(status);
 </script>
 
 <style lang="scss" scoped>

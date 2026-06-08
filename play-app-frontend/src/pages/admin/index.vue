@@ -49,7 +49,19 @@
         <view class="card-row"><text class="label">助教ID:</text><text>{{ item.companionId }}</text></view>
         <view class="card-row"><text class="label">金额:</text><text class="price">¥{{ item.totalAmount }}</text></view>
         <view class="card-row"><text class="label">状态:</text><text>{{ getOrderStatusText(item.status) }}</text></view>
+        <view class="card-row" v-if="item.address"><text class="label">地址:</text><text>{{ item.address }}</text></view>
+        <view class="card-row" v-if="item.customerWechat"><text class="label">联系:</text><text>{{ item.customerWechat }}</text></view>
+        <view class="card-actions" v-if="getAdminOrderActions(item).length">
+          <button class="btn"
+                  v-for="action in getAdminOrderActions(item)"
+                  :key="action.key"
+                  :class="action.primary ? 'success' : ''"
+                  @click="handleOrderAction(item, action.key)">
+            {{ action.label }}
+          </button>
+        </view>
       </view>
+      <view class="empty" v-if="orderList.length === 0">暂无订单</view>
     </scroll-view>
   </view>
 </template>
@@ -129,8 +141,47 @@ const auditWithdrawal = async (id: number, status: number) => {
   }
 };
 
+const handleOrderAction = (item: any, action: string) => {
+  const config: Record<string, { title: string; url: string; data?: any }> = {
+    group: { title: '标记客服已拉群？', url: `/admin/orders/${item.orderNo}/group-created`, data: { remark: '客服已完成三方群对接' } },
+    start: { title: '标记服务开始？', url: `/admin/orders/${item.orderNo}/start`, data: { actualAddress: item.address, remark: '服务已开始' } },
+    finish: { title: '核销该订单完工？', url: `/admin/orders/${item.orderNo}/finish`, data: { finishRemark: '平台核销完工', finishType: 1 } },
+    settle: { title: '确认结算并放款？', url: `/admin/orders/${item.orderNo}/settle`, data: { remark: '平台结算放款' } }
+  };
+  const target = config[action];
+  if (!target) return;
+
+  uni.showModal({
+    title: '订单操作',
+    content: target.title,
+    success: async (res: any) => {
+      if (!res.confirm) return;
+      try {
+        await request({ url: target.url, method: 'PUT', data: target.data || {} });
+        uni.showToast({ title: '操作成功', icon: 'success' });
+        loadOrders();
+      } catch (e) {
+        uni.showToast({ title: '操作失败', icon: 'none' });
+      }
+    }
+  });
+};
+
+const getAdminOrderActions = (item: any) => {
+  const status = item.status;
+  if (status === 20) return [{ key: 'group', label: '标记拉群', primary: true }];
+  if (status === 30 || status === 40) return [{ key: 'start', label: '服务开始', primary: true }, { key: 'finish', label: '直接核销' }];
+  if (status === 50 || status === 60) return [{ key: 'finish', label: '核销完工', primary: true }];
+  if (status === 70) return [{ key: 'settle', label: '结算放款', primary: true }];
+  return [];
+};
+
 const getOrderStatusText = (status: number) => {
-  const map: Record<number, string> = { 10:'待付款', 20:'已付款', 30:'已接单', 70:'已确认', 80:'已完成', 100:'取消申请', 120:'已退款', 250:'已关闭' };
+  const map: Record<number, string> = {
+    10:'待付款', 20:'待拉群', 30:'已拉群', 40:'双方确认', 50:'服务中',
+    60:'待确认', 70:'待结算/待评价', 80:'已完成', 100:'退款申请中',
+    110:'退款处理中', 120:'已退款', 130:'部分退款', 250:'已关闭'
+  };
   return map[status] || String(status);
 };
 </script>

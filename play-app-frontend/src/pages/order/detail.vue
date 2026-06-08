@@ -19,11 +19,19 @@
       <view class="section-title">服务详情</view>
       <view class="row">
         <text class="label">预约时间</text>
-        <text class="value">{{ order.reserveDate }} {{ order.reserveTimeStart }}</text>
+        <text class="value">{{ order.reserveDate }} {{ order.reserveTimeStart }}{{ order.reserveTimeEnd ? '-' + order.reserveTimeEnd : '' }}</text>
       </view>
       <view class="row">
         <text class="label">服务时长</text>
         <text class="value">{{ order.hours }} 小时</text>
+      </view>
+      <view class="row">
+        <text class="label">服务地址</text>
+        <text class="value">{{ order.address }}{{ order.addressDetail ? ' ' + order.addressDetail : '' }}</text>
+      </view>
+      <view class="row">
+        <text class="label">联系方式</text>
+        <text class="value">{{ order.customerWechat || '未填写' }}</text>
       </view>
       <view class="row">
         <text class="label">订单备注</text>
@@ -59,18 +67,19 @@
         <text class="label">实付款</text>
         <text class="value highlight">¥{{ order.totalAmount }}</text>
       </view>
+      <view class="row" v-if="order.refundAmount && Number(order.refundAmount) > 0">
+        <text class="label">退款金额</text>
+        <text class="value">¥{{ order.refundAmount }}</text>
+      </view>
     </view>
 
     <!-- 底部操作栏 -->
-    <view class="bottom-bar" v-if="order.status === 10 || order.status === 30 || order.status === 70">
+    <view class="bottom-bar" v-if="hasActions(order.status)">
       <button class="btn" v-if="order.status === 10" @click="goToPay">去支付</button>
-      <button class="btn primary" v-if="order.status === 30" @click="confirmOrder">确认完工</button>
-      <button class="btn primary" v-if="order.status === 70" @click="goToReview">去评价</button>
-    </view>
-
-    <!-- 取消订单 -->
-    <view class="bottom-bar" v-if="order.status === 10 || order.status === 20">
-      <button class="btn cancel" @click="cancelOrder">取消订单</button>
+      <button class="btn" v-if="canCancel(order.status)" @click="cancelOrder">取消订单</button>
+      <button class="btn" v-if="canRefund(order.status)" @click="goToRefund">申请退款</button>
+      <button class="btn primary" v-if="order.status === 60" @click="confirmOrder">确认完工</button>
+      <button class="btn primary" v-if="order.status === 70 || order.status === 80" @click="goToReview">去评价</button>
     </view>
   </view>
 </template>
@@ -103,17 +112,23 @@ const fetchDetail = async () => {
 
 const getStatusText = (status: number) => {
   const map: Record<number, string> = {
-    10: '待付款', 20: '待接单', 30: '已接单', 40: '已确认',
-    50: '服务中', 60: '待确认', 70: '待评价', 80: '已完成',
-    100: '取消中', 120: '已退款', 250: '已关闭'
+    10: '待付款', 20: '待拉群', 30: '已拉群', 40: '双方确认',
+    50: '服务中', 60: '待确认', 70: '待评价/待结算', 80: '已完成',
+    100: '退款申请中', 110: '退款处理中', 120: '已退款', 130: '部分退款', 250: '已关闭'
   };
   return map[status] || '未知';
 };
 
 const getStatusDesc = (status: number) => {
   const map: Record<number, string> = {
-    10: '请尽快完成支付', 20: '等待搭子接单', 30: '搭子已接单，等待服务开始',
-    70: '服务已完成，请留下评价', 80: '感谢您的使用'
+    10: '请尽快完成支付',
+    20: '支付成功，等待客服拉三方群',
+    30: '客服已拉群，请按约定时间履约',
+    50: '服务进行中，如需退款请先与客服沟通',
+    60: '助教已发起完工，请确认服务结果',
+    70: '服务已核销，等待平台结算，可先评价',
+    80: '订单已完成，感谢您的使用',
+    100: '退款申请已提交，等待平台处理'
   };
   return map[status] || '';
 };
@@ -129,7 +144,7 @@ const goToPay = () => {
 const confirmOrder = () => {
   uni.showModal({
     title: '确认完工',
-    content: '确认服务已完成？确认后款项将打给搭子。',
+    content: '确认服务已完成？确认后平台将进入结算流程。',
     success: async (res: any) => {
       if (res.confirm) {
         const confirmRes = await request({
@@ -166,6 +181,14 @@ const cancelOrder = () => {
 const goToReview = () => {
   uni.navigateTo({ url: `/pages/order/review?orderNo=${orderNo.value}` });
 };
+
+const goToRefund = () => {
+  uni.navigateTo({ url: `/pages/order/refund?orderNo=${orderNo.value}` });
+};
+
+const canCancel = (status: number) => status === 10;
+const canRefund = (status: number) => [20, 30, 40, 50, 60].includes(status);
+const hasActions = (status: number) => canCancel(status) || canRefund(status) || status === 60 || status === 70 || status === 80;
 </script>
 
 <style lang="scss" scoped>
