@@ -36,8 +36,8 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
         if (!order.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "只能评价自己的订单");
         }
-        if (order.getStatus() != Order.STATUS_USER_CONFIRMED) {
-            throw new BusinessException(ErrorCode.PARAM_ERROR, "该订单尚未确认完工或已评价");
+        if (order.getStatus() != Order.STATUS_USER_CONFIRMED && order.getStatus() != Order.STATUS_SETTLED) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "该订单尚未完成，暂不能评价");
         }
 
         // 检查是否已评价
@@ -56,10 +56,6 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
         review.setStatus(1);
 
         this.save(review);
-
-        // 更新订单状态为已结算
-        order.setStatus(Order.STATUS_SETTLED);
-        orderService.updateById(order);
 
         // 更新助教平均评分
         updateCompanionRating(order.getCompanionId(), dto.getRating());

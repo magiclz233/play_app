@@ -42,6 +42,7 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
             wallet.setBalance(BigDecimal.ZERO);
             wallet.setFrozenAmount(BigDecimal.ZERO);
             wallet.setTotalIncome(BigDecimal.ZERO);
+            wallet.setTotalWithdrawn(BigDecimal.ZERO);
             this.save(wallet);
         }
         return wallet;
@@ -51,6 +52,7 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
     @Transactional(rollbackFor = Exception.class)
     public void addBalance(Long companionId, BigDecimal amount, Long orderId, String orderNo) {
         CompanionWallet wallet = getWalletByCompanionId(companionId);
+        BigDecimal balanceBefore = wallet.getBalance();
 
         wallet.setBalance(wallet.getBalance().add(amount));
         wallet.setTotalIncome(wallet.getTotalIncome().add(amount));
@@ -62,6 +64,8 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
         tx.setTransactionType(1); // 1-收入
         tx.setSourceType(1); // 1-订单收益
         tx.setSourceId(orderId);
+        tx.setBalanceBefore(balanceBefore);
+        tx.setBalanceAfter(wallet.getBalance());
         tx.setDescription("订单收益: " + orderNo);
         walletTransactionMapper.insert(tx);
 
@@ -72,6 +76,7 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
     @Transactional(rollbackFor = Exception.class)
     public void applyWithdraw(Long companionId, WithdrawDTO dto) {
         CompanionWallet wallet = getWalletByCompanionId(companionId);
+        BigDecimal balanceBefore = wallet.getBalance();
 
         if (wallet.getBalance().compareTo(dto.getAmount()) < 0) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "余额不足");
@@ -84,6 +89,7 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
         WithdrawalRecord record = new WithdrawalRecord();
         record.setCompanionId(companionId);
         record.setAmount(dto.getAmount());
+        record.setFee(BigDecimal.ZERO);
         record.setActualAmount(dto.getAmount());
         record.setStatus(0); // 待审核
         // 提现方式和账号存入extra
@@ -99,6 +105,8 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
         tx.setTransactionType(2); // 2-支出
         tx.setSourceType(2); // 2-提现
         tx.setSourceId(record.getId());
+        tx.setBalanceBefore(balanceBefore);
+        tx.setBalanceAfter(wallet.getBalance());
         tx.setDescription("提现申请冻结");
         walletTransactionMapper.insert(tx);
 
@@ -164,6 +172,8 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
             tx.setTransactionType(1); // 1-收入(退回)
             tx.setSourceType(3); // 3-提现退回
             tx.setSourceId(record.getId());
+            tx.setBalanceBefore(wallet.getBalance().subtract(record.getAmount()));
+            tx.setBalanceAfter(wallet.getBalance());
             tx.setDescription("提现被拒退回");
             walletTransactionMapper.insert(tx);
         } else {

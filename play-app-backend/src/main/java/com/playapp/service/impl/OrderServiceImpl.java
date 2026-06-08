@@ -11,9 +11,13 @@ import com.playapp.dto.OrderCreateDTO;
 import com.playapp.entity.CompanionProfile;
 import com.playapp.entity.CompanionSkill;
 import com.playapp.entity.Order;
+import com.playapp.entity.OrderStatusLog;
+import com.playapp.entity.ServiceRecord;
 import com.playapp.entity.User;
 import com.playapp.mapper.CompanionSkillMapper;
 import com.playapp.mapper.OrderMapper;
+import com.playapp.mapper.OrderStatusLogMapper;
+import com.playapp.mapper.ServiceRecordMapper;
 import com.playapp.service.CompanionProfileService;
 import com.playapp.service.CompanionWalletService;
 import com.playapp.service.OrderService;
@@ -24,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
@@ -37,6 +42,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final UserService userService;
     private final CompanionWalletService companionWalletService;
     private final CompanionSkillMapper companionSkillMapper;
+    private final OrderStatusLogMapper orderStatusLogMapper;
+    private final ServiceRecordMapper serviceRecordMapper;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private WxPayService wxPayService;
@@ -86,15 +93,22 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setPricePerHour(pricePerHour);
         order.setStatus(Order.STATUS_PENDING_PAY);
         order.setTotalAmount(totalAmount);
+        order.setCompanionAmount(totalAmount);
+        order.setPlatformFee(BigDecimal.ZERO);
         order.setRefundAmount(BigDecimal.ZERO);
         if (dto.getAppointmentTime() != null) {
             order.setReserveDate(dto.getAppointmentTime().toLocalDate());
             order.setReserveTimeStart(dto.getAppointmentTime().toLocalTime());
+            order.setReserveTimeEnd(dto.getAppointmentTime().plusHours(dto.getHours()).toLocalTime());
         }
         order.setHours(BigDecimal.valueOf(dto.getHours()));
+        order.setAddress(dto.getAddress());
+        order.setAddressDetail(dto.getAddressDetail());
+        order.setCustomerWechat(dto.getCustomerWechat());
         order.setCustomerRemark(dto.getRemark());
 
         this.save(order);
+        addStatusLog(order, null, Order.STATUS_PENDING_PAY, userId, 1, "用户创建订单");
 
         log.info("订单创建成功, orderNo: {}, userId: {}, companionId: {}", orderNo, userId, dto.getCompanionId());
 
@@ -168,10 +182,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
             Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
             if (order != null && order.getStatus() == Order.STATUS_PENDING_PAY) {
+                int fromStatus = order.getStatus();
                 order.setStatus(Order.STATUS_PAID);
                 order.setTransactionId(transactionId);
                 order.setPayTime(LocalDateTime.now());
                 this.updateById(order);
+                addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, "微信支付回调成功");
                 log.info("订单支付成功回调处理完成: {}", orderNo);
             }
 
@@ -185,10 +201,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private void mockPaySuccess(String orderNo) {
         Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
         if (order != null && order.getStatus() == Order.STATUS_PENDING_PAY) {
+            int fromStatus = order.getStatus();
             order.setStatus(Order.STATUS_PAID);
             order.setTransactionId("mock_trans_" + System.currentTimeMillis());
             order.setPayTime(LocalDateTime.now());
             this.updateById(order);
+            addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, "Mock 支付成功");
             log.info("Mock: 订单直接更新为支付成功: {}", orderNo);
         }
     }
@@ -231,17 +249,21 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!order.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "只有下单用户才能确认服务完成");
         }
-        if (order.getStatus() != Order.STATUS_PAID && order.getStatus() != Order.STATUS_GROUP_CREATED) {
+        if (order.getStatus() != Order.STATUS_FINISH_REQUESTED && order.getStatus() != Order.STATUS_USER_CONFIRMED) {
             throw new BusinessException(ErrorCode.PARAM_ERROR, "当前订单状态无法确认完工");
         }
 
+        if (order.getStatus() == Order.STATUS_USER_CONFIRMED) {
+            return;
+        }
+
+        int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_USER_CONFIRMED);
         order.setFinishTime(LocalDateTime.now());
         this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_USER_CONFIRMED, userId, 1, "用户确认完工，等待平台结算");
 
-        companionWalletService.addBalance(order.getCompanionId(), order.getTotalAmount(), order.getOrderId(), order.getOrderNo());
-
-        log.info("订单已确认完工并打款: {}", orderNo);
+        log.info("订单已由用户确认完工，等待平台结算: {}", orderNo);
     }
 
     @Override
@@ -255,8 +277,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法接单");
         }
 
+        int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_GROUP_CREATED);
+        order.setWechatGroupStatus(1);
         this.updateById(order);
+        ensureServiceRecord(order);
+        addStatusLog(order, fromStatus, Order.STATUS_GROUP_CREATED, companionId, 2, "助教接单");
         log.info("助教 {} 已接单: {}", companionId, orderNo);
     }
 
@@ -271,10 +297,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法拒单");
         }
 
+        int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_CANCEL_REQUESTED);
         order.setCancelReason(reason);
         order.setCancelType(2); // 2-助教拒单
         this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_CANCEL_REQUESTED, companionId, 2, reason);
         log.info("助教 {} 已拒单: {}, 原因: {}", companionId, orderNo, reason);
     }
 
@@ -291,6 +319,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         }
 
         // 已付款的进入退款流程，未付款的直接关闭
+        int fromStatus = order.getStatus();
         if (status == Order.STATUS_PAID) {
             order.setStatus(Order.STATUS_CANCEL_REQUESTED);
             order.setRefundAmount(order.getTotalAmount());
@@ -300,6 +329,160 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setCancelReason(reason);
         order.setCancelType(1); // 1-用户取消
         this.updateById(order);
+        addStatusLog(order, fromStatus, order.getStatus(), userId, 1, reason);
         log.info("用户 {} 取消订单: {}, 原因: {}", userId, orderNo, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void applyRefund(Long userId, String orderNo, String reason) {
+        Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
+        if (order == null || !order.getUserId().equals(userId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
+        }
+
+        int status = order.getStatus();
+        if (status != Order.STATUS_PAID
+                && status != Order.STATUS_GROUP_CREATED
+                && status != Order.STATUS_CONFIRMED
+                && status != Order.STATUS_IN_SERVICE
+                && status != Order.STATUS_FINISH_REQUESTED) {
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_CANCEL, "当前订单状态无法申请退款");
+        }
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_CANCEL_REQUESTED);
+        order.setRefundAmount(order.getTotalAmount());
+        order.setCancelReason(reason);
+        order.setCancelType(1);
+        this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_CANCEL_REQUESTED, userId, 1, reason);
+        log.info("用户 {} 申请退款: {}, 原因: {}", userId, orderNo, reason);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminMarkGroupCreated(Long adminId, String orderNo, String remark) {
+        Order order = getOrderByNo(orderNo);
+        if (order.getStatus() != Order.STATUS_PAID) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已付款订单才能标记拉群完成");
+        }
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_GROUP_CREATED);
+        order.setWechatGroupStatus(1);
+        this.updateById(order);
+        ensureServiceRecord(order);
+        addStatusLog(order, fromStatus, Order.STATUS_GROUP_CREATED, adminId, 3, defaultText(remark, "客服已完成三方群对接"));
+        log.info("管理员 {} 标记订单已拉群: {}", adminId, orderNo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminStartService(Long adminId, String orderNo, String actualAddress, String remark) {
+        Order order = getOrderByNo(orderNo);
+        if (order.getStatus() != Order.STATUS_GROUP_CREATED && order.getStatus() != Order.STATUS_CONFIRMED) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已拉群订单才能标记服务开始");
+        }
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_IN_SERVICE);
+        this.updateById(order);
+
+        ServiceRecord record = ensureServiceRecord(order);
+        if (record.getActualStartTime() == null) {
+            record.setActualStartTime(LocalDateTime.now());
+        }
+        if (actualAddress != null && !actualAddress.isBlank()) {
+            record.setActualAddress(actualAddress);
+        }
+        serviceRecordMapper.updateById(record);
+
+        addStatusLog(order, fromStatus, Order.STATUS_IN_SERVICE, adminId, 3, defaultText(remark, "服务已开始"));
+        log.info("管理员 {} 标记订单服务开始: {}", adminId, orderNo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminConfirmFinish(Long adminId, String orderNo, String finishRemark, Integer finishType) {
+        Order order = getOrderByNo(orderNo);
+        if (order.getStatus() != Order.STATUS_GROUP_CREATED
+                && order.getStatus() != Order.STATUS_CONFIRMED
+                && order.getStatus() != Order.STATUS_IN_SERVICE
+                && order.getStatus() != Order.STATUS_FINISH_REQUESTED) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法核销完工");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_USER_CONFIRMED);
+        order.setFinishTime(now);
+        this.updateById(order);
+
+        ServiceRecord record = ensureServiceRecord(order);
+        if (record.getActualStartTime() == null) {
+            record.setActualStartTime(now);
+        }
+        record.setActualEndTime(now);
+        record.setActualDuration((int) Duration.between(record.getActualStartTime(), now).toMinutes());
+        record.setFinishRemark(finishRemark);
+        record.setFinishType(finishType == null ? 1 : finishType);
+        serviceRecordMapper.updateById(record);
+
+        addStatusLog(order, fromStatus, Order.STATUS_USER_CONFIRMED, adminId, 3, defaultText(finishRemark, "平台核销完工"));
+        log.info("管理员 {} 核销订单完工: {}", adminId, orderNo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminSettleOrder(Long adminId, String orderNo, String remark) {
+        Order order = getOrderByNo(orderNo);
+        if (order.getStatus() != Order.STATUS_USER_CONFIRMED) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已确认完工订单才能结算");
+        }
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_SETTLED);
+        this.updateById(order);
+        companionWalletService.addBalance(order.getCompanionId(), order.getTotalAmount(), order.getOrderId(), order.getOrderNo());
+        addStatusLog(order, fromStatus, Order.STATUS_SETTLED, adminId, 3, defaultText(remark, "平台结算放款"));
+        log.info("管理员 {} 结算订单并放款: {}", adminId, orderNo);
+    }
+
+    private Order getOrderByNo(String orderNo) {
+        Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
+        if (order == null) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在");
+        }
+        return order;
+    }
+
+    private ServiceRecord ensureServiceRecord(Order order) {
+        ServiceRecord record = serviceRecordMapper.selectOne(
+                new LambdaQueryWrapper<ServiceRecord>().eq(ServiceRecord::getOrderId, order.getOrderId()));
+        if (record != null) {
+            return record;
+        }
+
+        record = new ServiceRecord();
+        record.setOrderId(order.getOrderId());
+        record.setCompanionId(order.getCompanionId());
+        serviceRecordMapper.insert(record);
+        return record;
+    }
+
+    private void addStatusLog(Order order, Integer fromStatus, Integer toStatus, Long operatorId, Integer operatorRole, String reason) {
+        OrderStatusLog log = new OrderStatusLog();
+        log.setOrderId(order.getOrderId());
+        log.setFromStatus(fromStatus);
+        log.setToStatus(toStatus);
+        log.setOperatorId(operatorId == null ? 0L : operatorId);
+        log.setOperatorRole(operatorRole);
+        log.setChangeReason(reason);
+        orderStatusLogMapper.insert(log);
+    }
+
+    private String defaultText(String text, String fallback) {
+        return text == null || text.isBlank() ? fallback : text;
     }
 }

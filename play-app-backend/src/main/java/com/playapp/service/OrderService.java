@@ -58,4 +58,29 @@ public interface OrderService extends IService<Order> {
      * 客户取消订单
      */
     void cancelOrder(Long userId, String orderNo, String reason);
+
+    /**
+     * 用户申请退款
+     */
+    void applyRefund(Long userId, String orderNo, String reason);
+
+    /**
+     * 管理员标记已完成三方群对接
+     */
+    void adminMarkGroupCreated(Long adminId, String orderNo, String remark);
+
+    /**
+     * 管理员标记服务开始
+     */
+    void adminStartService(Long adminId, String orderNo, String actualAddress, String remark);
+
+    /**
+     * 管理员核销完工
+     */
+    void adminConfirmFinish(Long adminId, String orderNo, String finishRemark, Integer finishType);
+
+    /**
+     * 管理员结算放款
+     */
+    void adminSettleOrder(Long adminId, String orderNo, String remark);
 }
