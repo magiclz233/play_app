@@ -3,6 +3,7 @@ package com.playapp.controller;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.playapp.common.Result;
 import com.playapp.dto.OrderCreateDTO;
+import com.playapp.dto.RefundApplyDTO;
 import com.playapp.entity.Order;
 import com.playapp.service.OrderService;
 import com.playapp.service.ReviewService;
@@ -86,5 +87,14 @@ public class OrderController {
         String reason = body.getOrDefault("reason", "");
         orderService.cancelOrder(userId, orderNo, reason);
         return Result.success("订单已取消");
+    }
+
+    /**
+     * 申请退款
+     */
+    @PostMapping("/{orderNo}/refund")
+    public Result<?> applyRefund(@AuthenticationPrincipal Long userId, @PathVariable String orderNo, @Valid @RequestBody RefundApplyDTO dto) {
+        orderService.applyRefund(userId, orderNo, dto.getReason());
+        return Result.success("退款申请已提交");
     }
 }
