@@ -3,10 +3,12 @@ package com.playapp.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.playapp.common.Result;
+import com.playapp.dto.AdminOrderActionDTO;
 import com.playapp.entity.Order;
 import com.playapp.service.OrderService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -34,5 +36,49 @@ public class AdminOrderController {
         wrapper.orderByDesc(Order::getCreateTime);
         
         return Result.success(orderService.page(page, wrapper));
+    }
+
+    @PutMapping("/{orderNo}/group-created")
+    public Result<?> markGroupCreated(
+            @AuthenticationPrincipal Long adminId,
+            @PathVariable String orderNo,
+            @RequestBody(required = false) AdminOrderActionDTO dto) {
+        orderService.adminMarkGroupCreated(adminId, orderNo, dto == null ? null : dto.getRemark());
+        return Result.success("已标记客服拉群完成");
+    }
+
+    @PutMapping("/{orderNo}/start")
+    public Result<?> startService(
+            @AuthenticationPrincipal Long adminId,
+            @PathVariable String orderNo,
+            @RequestBody(required = false) AdminOrderActionDTO dto) {
+        orderService.adminStartService(
+                adminId,
+                orderNo,
+                dto == null ? null : dto.getActualAddress(),
+                dto == null ? null : dto.getRemark());
+        return Result.success("已标记服务开始");
+    }
+
+    @PutMapping("/{orderNo}/finish")
+    public Result<?> confirmFinish(
+            @AuthenticationPrincipal Long adminId,
+            @PathVariable String orderNo,
+            @RequestBody(required = false) AdminOrderActionDTO dto) {
+        orderService.adminConfirmFinish(
+                adminId,
+                orderNo,
+                dto == null ? null : dto.getFinishRemark(),
+                dto == null ? null : dto.getFinishType());
+        return Result.success("已核销完工");
+    }
+
+    @PutMapping("/{orderNo}/settle")
+    public Result<?> settleOrder(
+            @AuthenticationPrincipal Long adminId,
+            @PathVariable String orderNo,
+            @RequestBody(required = false) AdminOrderActionDTO dto) {
+        orderService.adminSettleOrder(adminId, orderNo, dto == null ? null : dto.getRemark());
+        return Result.success("已结算放款");
     }
 }
