@@ -10,65 +10,34 @@
 
 ### 1. 颜色变量 (Color Custom Properties)
 
-在全局 `uni.scss` 或根组件样式中注册以下变量：
+应用的核心 UI 色彩表现通过全局唯一的配置文件 `src/theme/tokens.ts` 进行管理。所有组件应直接使用 CSS 变量（如 `var(--bg-main)`）。以下是当前采用的**自适应明暗色主题变量**：
 
-```css
-/* ==========================================================================
-   自适应明暗色主题变量定义
-   ========================================================================== */
+#### 浅色模式 - 晨露粉杏与流光珊瑚 (Light Theme)
+*   **--bg-main**: `#FAF5F5` (柔和暖杏白：大背景底色)
+*   **--bg-card**: `#FFFFFF` (纯净润白：卡片/弹窗背景)
+*   **--border-color**: `rgba(255, 59, 92, 0.08)` (微红细边框)
+*   **--text-primary**: `#1A1A1F` (深墨黑：主要文字)
+*   **--text-secondary**: `#5E6066` (青灰：副标题)
+*   **--text-muted**: `#999A9F` (浅灰：占位符)
+*   **--shadow-floating**: `0 12px 40px rgba(255, 59, 92, 0.12)` (悬浮按钮柔和阴影)
 
-/* 1. 浅色模式 - 暖杏燕麦色系 (Light Theme) */
-.theme-light {
-  --bg-main: #FAF6F0;           /* 柔和暖杏燕麦白：大背景底色 */
-  --bg-card: #FFFDFB;           /* 润白乳脂色：卡片/弹窗背景 */
-  --border-color: rgba(26, 22, 19, 0.05); /* 卡片与输入框细边框 */
-  
-  --text-primary: #1A1613;      /* 深咖啡黑：标题与正文主要文字 */
-  --text-secondary: #8E8279;    /* 暖褐灰：副标题与辅助说明文字 */
-  --text-muted: #BDB2AA;        /* 麦芽浅灰：禁用状态与占位文字 */
-  
-  --shadow-card: 0 8px 30px rgba(26, 22, 19, 0.03); /* 温和软阴影 */
-  --shadow-floating: 0 12px 40px rgba(255, 91, 113, 0.08); /* 悬浮按钮阴影 */
-}
+#### 深色模式 - 深邃炭灰与霓虹珊瑚 (Dark Theme)
+*   **--bg-main**: `#18181C` (深邃炭灰护眼色：大背景底色)
+*   **--bg-card**: `#202127` (高级暗灰：卡片/弹窗背景)
+*   **--border-color**: `rgba(255, 255, 255, 0.06)` (极细微光白边框)
+*   **--text-primary**: `#E2E4E9` (柔和灰白：主要文字)
+*   **--text-secondary**: `#A1A5B1` (中度灰：副标题)
+*   **--text-muted**: `#737887` (深灰：占位符)
+*   **--shadow-floating**: `0 12px 32px rgba(255, 59, 92, 0.12)` (微弱的霓虹珊瑚红发光阴影)
 
-/* 2. 深色模式 - 意式特浓黑系 (Dark Theme - 默认) */
-.theme-dark {
-  --bg-main: #1A1613;           /* 温暖意式浓缩黑：大背景底色 */
-  --bg-card: #221E1A;           /* 暗香槟金黑：卡片/弹窗背景 */
-  --border-color: rgba(255, 255, 255, 0.04); /* 极细微光边框 */
-  
-  --text-primary: #F5EFEB;      /* 象牙暖白：标题与正文主要文字 */
-  --text-secondary: #A19791;    /* 麦芽沙灰：副标题与辅助说明文字 */
-  --text-muted: #625852;        /* 烟熏深褐灰：禁用状态与占位文字 */
-  
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.4); /* 深色三维阴影 */
-  --shadow-floating: 0 12px 40px rgba(255, 91, 113, 0.15); /* 深色悬浮按钮阴影 */
-}
+#### 全局共享色彩变量 (明暗通用)
+*   **--color-primary**: `#FF3B5C` (品牌主色：流光珊瑚红)
+*   **--color-primary-light**: 浅色下为 `#FFF0F2`，深色下为深克莱因红 `#31171E` (按钮、标签底色)
+*   **--color-gradient-end**: `#FF7B54` (主渐变色终点：日落橘)
+*   **--color-accent**: `#FF9F1C` (强调色：暖琥珀金，用于皇冠、高亮)
+*   **--color-success**: `#10B981` (状态色：在线翡翠绿)
 
-/* 3. 全局共享色彩变量 (明暗通用) */
-:root {
-  --color-primary: #FF5B71;     /* 品牌主色：落日珊瑚红 */
-  --color-primary-rgb: 255, 91, 113;
-  --color-primary-hover: #E03E54;
-  --color-primary-light: #FFECEF; /* 浅珊瑚红背景（标签用） */
-  
-  --color-accent: #F59E0B;      /* 强调色：暖琥珀金 (用于排行榜第一、皇冠、高亮) */
-  --color-success: #10B981;     /* 成功/在线状态：翡翠绿 */
-  --color-error: #EF4444;       /* 异常/驳回状态：警示红 */
-  
-  /* 圆角与边距规范 */
-  --radius-sm: 8px;
-  --radius-md: 12px;
-  --radius-lg: 16px;
-  --radius-full: 9999px;
-  
-  --space-xs: 8rpx;
-  --space-sm: 16rpx;
-  --space-md: 24rpx;
-  --space-lg: 32rpx;
-  --space-xl: 48rpx;
-}
-```
+*请注意：主按钮 `button[type="primary"]` 已在 `App.vue` 中配置了全局渐变 `linear-gradient(135deg, var(--color-primary), var(--color-gradient-end))` 与发光阴影效果。*
 
 ### 2. 字体与字号规范 (Typography)
 
@@ -83,6 +52,12 @@
 ---
 
 ## 📱 二、 核心页面视觉与布局规范 (Page Specs)
+
+### 0. 全局卡片华贵质感提升 (Premium Component Styling)
+为了在不依赖大量 DOM 结构和繁重 CSS 的前提下提升整体华贵感，所有卡片级组件（所有带有 `card` 类名或 `u-card` 的 `view`）默认生效以下全局样式（配置于 `App.vue`）：
+*   **表面材质微反光 (Surface Reflection)**：通过 `linear-gradient` 附加一层极弱（3%）的自左上而下的表面渐变光，打破纯色的沉闷感。
+*   **玻璃切割边缘 (Beveled Edge Highlight)**：利用 `box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.08)` 在卡片内侧顶部打上一层白色高光，模拟玻璃或高级亚克力的边缘切割反光。
+*   **色彩弥散阴影 (Tinted Drop Shadow)**：卡片的外阴影 `var(--shadow-card)` 中融合了微弱的主色调（流光珊瑚红）辉光，取代了传统的脏黑色阴影，带来极为高级的悬浮发光质感。
 
 ### 1. 首页 / 助教大厅 (pages/index/index.vue)
 * **大背景**：应用全局背景色 `var(--bg-main)`。
@@ -154,86 +129,39 @@ $uni-border-radius-lg: var(--radius-lg);
 
 ## ⚙️ 四、 微信小程序明暗模式自适应开发实现
 
-前端需要自动监听系统的明暗主题设置，并在用户界面中瞬时重绘。
+当前项目采用了更加现代和高效的 **Pinia 状态管理 + 原生 API 注入** 架构，不再需要在每个页面手动绑定 `class`。
 
-### 1. App.vue 主题配置监听
-在 `App.vue` 的 `onLaunch` 与 `onShow` 中获取微信客户端的主题配置：
+### 1. 全局配置与状态流转 (`src/store/app.ts`)
+我们通过 `appStore` 来管理当前主题，并在获取系统主题后，通过 `applyThemeToNativeUi` 自动将 `tokens.ts` 中的变量挂载到小程序的原生 UI (NavigationBar, TabBar) 和 全局 `<page>` 标签上。
+
+### 2. App.vue 统一接管
+在 `App.vue` 的 `onLaunch` 与 `onShow` 生命周期中调用 Store，完成无感知的自适应重绘：
 
 ```typescript
 // App.vue
-export default {
-  onLaunch: function() {
-    this.updateTheme();
-    // 监听系统主题变化
-    uni.onThemeChange((res) => {
-      this.setThemeClass(res.theme);
-    });
-  },
-  methods: {
-    updateTheme() {
-      // 获取当前系统明暗主题
-      const systemInfo = uni.getSystemInfoSync();
-      const theme = systemInfo.theme || 'dark'; // 默认采用深色模式
-      this.setThemeClass(theme);
-    },
-    setThemeClass(theme: 'light' | 'dark') {
-      // 将主题类名存入全局状态或直接挂载至页面容器上
-      uni.$emit('theme-change', theme);
-      // 可通过 Pinia 存入 store 状态
-    }
-  }
-}
-```
+<script setup lang="ts">
+import { onLaunch, onShow } from "@dcloudio/uni-app";
+import { useAppStore } from "./store/app";
 
-### 2. 页面根节点变量绑定
-在每个 Vue 页面文件的最外层容器中绑定主题 Class：
-
-```html
-<!-- pages/index/index.vue -->
-<template>
-  <view :class="['page-container', themeClass]">
-    <view class="lobby-card">
-      <text class="title">推荐助教</text>
-    </view>
-  </view>
-</template>
-
-<script lang="ts" setup>
-import { ref, onMounted, onUnmounted } from 'vue';
-
-const themeClass = ref('theme-dark'); // 默认深色系
-
-const handleThemeChange = (theme: 'light' | 'dark') => {
-  themeClass.value = `theme-${theme}`;
-};
-
-onMounted(() => {
-  // 初始化获取当前主题
-  const info = uni.getSystemInfoSync();
-  themeClass.value = `theme-${info.theme || 'dark'}`;
-  uni.$on('theme-change', handleThemeChange);
+onLaunch(() => {
+  const appStore = useAppStore();
+  appStore.initApp(); // 内部会监听 uni.onThemeChange 并触发更新
 });
 
-onUnmounted(() => {
-  uni.$off('theme-change', handleThemeChange);
+onShow(() => {
+  const appStore = useAppStore();
+  appStore.applyThemeToNativeUi();
 });
 </script>
+```
 
-<style lang="scss" scoped>
-.page-container {
-  min-height: 100vh;
-  background-color: var(--bg-main);
+### 3. 组件级色彩调用
+由于 `applyThemeToNativeUi` 已经将 CSS 变量注入了原生层，所有 `.vue` 页面与组件的开发中，**无需手动判断环境**，直接使用变量即可。无论是暗色还是亮色，都会瞬间平滑过渡：
+
+```css
+.card {
+  background-color: var(--bg-card); /* 自动响应明暗模式 */
   color: var(--text-primary);
-  padding: var(--space-md);
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.lobby-card {
-  background-color: var(--bg-card);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  padding: var(--space-md);
 }
-</style>
 ```
