@@ -70,3 +70,4 @@ play-app-backend/uploads/
 # Claude
 # ==============================
 .claude/
+logs/
