@@ -1,87 +1,89 @@
 <template>
-  <view class="container" v-if="companion">
+  <view class="container" :class="appStore.themeClass" v-if="companion">
     <view class="companion-card">
       <image :src="coverUrl" mode="aspectFill" class="avatar"></image>
       <view class="info">
         <view class="name-box">
           <text class="name">{{ companion.nickname }}</text>
-          <text class="tag">{{ companion.gender === 1 ? '男' : '女' }} {{ companion.age }}岁</text>
+          <text class="tag">{{ getGenderText(companion.gender) }} {{ t('detail.ageUnit', { age: companion.age }) }}</text>
         </view>
-        <text class="price">¥{{ companion.pricePerHour }}/小时</text>
+        <text class="price">¥{{ companion.pricePerHour }}/{{ appStore.locale === 'en' ? 'hr' : '小时' }}</text>
       </view>
     </view>
 
     <view class="form-group">
-      <view class="section-title">预约信息</view>
-      <view class="form-item" @click="showTimePicker = true">
-        <text class="label">服务时间</text>
-        <view class="value" :class="{ placeholder: !selectedTime }">{{ formattedTime || '请选择时间段' }}</view>
+      <view class="section-title">{{ appStore.locale === 'en' ? 'Booking Info' : '预约信息' }}</view>
+      <view class="form-item" @click="showTimePicker = true" hover-class="item-hover">
+        <text class="label">{{ t('order.time') }}</text>
+        <view class="value" :class="{ placeholder: !selectedTime }">{{ formattedTime || (appStore.locale === 'en' ? 'Select Date & Time' : '请选择时间段') }}</view>
         <text class="iconfont icon-arrow-right"></text>
       </view>
 
       <view class="form-item">
-        <text class="label">服务时长</text>
+        <text class="label">{{ t('order.duration') }}</text>
         <view class="stepper">
-          <view class="step-btn" :class="{ disabled: hours <= 1 }" @click="changeHours(-1)">-</view>
+          <view class="step-btn" :class="{ disabled: hours <= 1 }" @click="changeHours(-1)" hover-class="button-hover">-</view>
           <input type="number" v-model="hours" class="hour-input" @blur="checkHours" />
-          <view class="step-btn" @click="changeHours(1)">+</view>
+          <view class="step-btn" @click="changeHours(1)" hover-class="button-hover">+</view>
         </view>
-        <text class="unit">小时</text>
+        <text class="unit">{{ appStore.locale === 'en' ? 'Hrs' : '小时' }}</text>
       </view>
     </view>
 
     <view class="form-group">
-      <view class="section-title">对接信息</view>
+      <view class="section-title">{{ appStore.locale === 'en' ? 'Contact & Address' : '对接信息' }}</view>
       <view class="form-item vertical">
-        <text class="label">微信号/手机号</text>
-        <input class="std-input" v-model="customerWechat" placeholder="用于客服拉群和线下对接" maxlength="50" />
+        <text class="label">{{ appStore.locale === 'en' ? 'WeChat / Phone ID' : '微信号/手机号' }}</text>
+        <input class="std-input" v-model="customerWechat" :placeholder="appStore.locale === 'en' ? 'For group chat coordination' : '用于客服拉群和线下对接'" maxlength="50" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
-        <text class="label">服务地址</text>
-        <input class="std-input" v-model="address" placeholder="请选择或填写服务地址" maxlength="255" />
+        <text class="label">{{ t('order.reserveAddress') }}</text>
+        <input class="std-input" v-model="address" :placeholder="appStore.locale === 'en' ? 'Enter service location' : '请选择或填写服务地址'" maxlength="255" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
-        <text class="label">详细地址</text>
-        <input class="std-input" v-model="addressDetail" placeholder="门牌号、包间号等（选填）" maxlength="255" />
+        <text class="label">{{ appStore.locale === 'en' ? 'Room / Door No. (Optional)' : '详细地址' }}</text>
+        <input class="std-input" v-model="addressDetail" :placeholder="appStore.locale === 'en' ? 'Door no, room no, etc. (Optional)' : '门牌号、包间号等（选填）'" maxlength="255" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
-        <text class="label">订单备注</text>
-        <textarea v-model="remark" placeholder="特殊要求（选填）" maxlength="100"></textarea>
+        <text class="label">{{ t('detail.remark') }}</text>
+        <textarea v-model="remark" :placeholder="appStore.locale === 'en' ? 'Special requirements (Optional)' : '特殊要求（选填）'" maxlength="100" placeholder-class="std-placeholder"></textarea>
       </view>
     </view>
 
     <view class="form-group">
-      <view class="section-title">费用明细</view>
+      <view class="section-title">{{ appStore.locale === 'en' ? 'Billing Summary' : '费用明细' }}</view>
       <view class="cost-row">
-        <text class="label">服务费 (¥{{ companion.pricePerHour }} x {{ hours }}时)</text>
+        <text class="label">{{ serviceFeeLabel }} (¥{{ companion.pricePerHour }} x {{ hours }}{{ serviceHourUnit }})</text>
         <text class="value">¥{{ totalServiceFee }}</text>
       </view>
       <view class="cost-row">
-        <text class="label">平台服务费</text>
+        <text class="label">{{ appStore.locale === 'en' ? 'Platform Fee' : '平台服务费' }}</text>
         <text class="value">¥0.00</text>
       </view>
       <view class="cost-row total">
-        <text class="label">合计</text>
+        <text class="label">{{ appStore.locale === 'en' ? 'Total' : '合计' }}</text>
         <text class="value highlight">¥{{ totalServiceFee }}</text>
       </view>
     </view>
 
     <view class="safe-notice">
       <text class="iconfont icon-safe"></text>
-      <text>支付资金由平台担保，服务完成并核销后再结算给助教。</text>
+      <text>{{ appStore.locale === 'en' ? 'Payment is escrowed by platform until service confirmation.' : '支付资金由平台担保，服务完成并核销后再结算给助教。' }}</text>
     </view>
 
     <view class="bottom-bar">
       <view class="total-box">
-        <text class="label">合计：</text>
+        <text class="label">{{ appStore.locale === 'en' ? 'Total:' : '合计：' }}</text>
         <text class="price">¥{{ totalServiceFee }}</text>
       </view>
-      <button class="pay-btn" @click="submitOrder" :loading="isSubmitting">立即支付</button>
+      <button class="pay-btn" @click="submitOrder" :loading="isSubmitting" hover-class="button-hover">
+        {{ appStore.locale === 'en' ? 'Pay Now' : '立即支付' }}
+      </button>
     </view>
 
     <view class="time-mask" v-if="showTimePicker" @click="showTimePicker = false">
       <view class="time-panel" @click.stop>
-        <view class="panel-title">选择服务时间</view>
+        <view class="panel-title">{{ appStore.locale === 'en' ? 'Select Service Time' : '选择服务时间' }}</view>
         <scroll-view scroll-x class="date-tabs">
           <view class="date-tab"
                 v-for="item in dateOptions"
@@ -97,11 +99,11 @@
                 :key="slot"
                 :class="{ active: selectedTime === slot, disabled: isSlotDisabled(slot) }"
                 @click="chooseTime(slot)">
-            <text>{{ slot }}</text>
-            <text>{{ isSlotDisabled(slot) ? '不可预约' : '可预约' }}</text>
+            <text class="slot-time">{{ slot }}</text>
+            <text class="slot-status">{{ isSlotDisabled(slot) ? (appStore.locale === 'en' ? 'Full' : '不可预约') : (appStore.locale === 'en' ? 'Open' : '可预约') }}</text>
           </view>
         </view>
-        <button class="panel-confirm" @click="confirmTime">确定</button>
+        <button class="panel-confirm" @click="confirmTime" hover-class="button-hover">{{ t('common.confirm') }}</button>
       </view>
     </view>
   </view>
@@ -111,9 +113,18 @@
 import { computed, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
+const appStore = useAppStore();
 const companion = ref<any>(null);
 const hours = ref(3);
+const serviceFeeLabel = computed(() => {
+  return appStore.locale === 'en' ? 'Service Fee' : '服务费';
+});
+const serviceHourUnit = computed(() => {
+  return appStore.locale === 'en' ? 'hrs' : '时';
+});
 const remark = ref('');
 const address = ref('');
 const addressDetail = ref('');
@@ -124,18 +135,34 @@ const showTimePicker = ref(false);
 const pad = (num: number) => String(num).padStart(2, '0');
 const formatDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 
-const dateOptions = Array.from({ length: 5 }).map((_, index) => {
-  const date = new Date();
-  date.setDate(date.getDate() + index);
-  const week = ['周日', '周一', '周二', '周三', '周四', '周五', '周六'][date.getDay()];
-  return {
-    value: formatDateValue(date),
-    label: `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${week}`
+const getGenderText = (gender: number) => {
+  if (gender === 1) return appStore.locale === 'en' ? 'Male' : '男';
+  return appStore.locale === 'en' ? 'Female' : '女';
+};
+
+// 动态计算未来5天日期，包含中英文星期名
+const dateOptions = computed(() => {
+  const weekMap: Record<string, Record<number, string>> = {
+    'zh-Hans': { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' },
+    'zh-Hant': { 0: '周日', 1: '周一', 2: '周二', 3: '周三', 4: '周四', 5: '周五', 6: '周六' },
+    'en': { 0: 'Sun', 1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: 'Sat' }
   };
+  const currentLocale = appStore.locale;
+  const weeks = weekMap[currentLocale] || weekMap['zh-Hans'];
+
+  return Array.from({ length: 5 }).map((_, index) => {
+    const date = new Date();
+    date.setDate(date.getDate() + index);
+    const weekLabel = weeks[date.getDay()];
+    return {
+      value: formatDateValue(date),
+      label: `${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${weekLabel}`
+    };
+  });
 });
 
 const timeSlots = ['10:00', '10:30', '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30', '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30', '23:00'];
-const selectedDate = ref(dateOptions[0].value);
+const selectedDate = ref(formatDateValue(new Date()));
 const selectedTime = ref('');
 
 const coverUrl = computed(() => companion.value?.photoUrls?.[0] || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop');
@@ -143,8 +170,13 @@ const selectedDateTime = computed(() => selectedTime.value ? new Date(`${selecte
 const formattedTime = computed(() => {
   if (!selectedDateTime.value) return '';
   const d = selectedDateTime.value;
+  if (appStore.locale === 'en') {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    return `${months[d.getMonth()]} ${pad(d.getDate())}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
   return `${pad(d.getMonth() + 1)}月${pad(d.getDate())}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 });
+
 const totalServiceFee = computed(() => {
   if (!companion.value) return '0.00';
   return (Number(companion.value.pricePerHour || 0) * Number(hours.value || 1)).toFixed(2);
@@ -178,7 +210,7 @@ const chooseTime = (slot: string) => {
 
 const confirmTime = () => {
   if (!selectedTime.value || isSlotDisabled(selectedTime.value)) {
-    uni.showToast({ title: '请选择可预约时间', icon: 'none' });
+    uni.showToast({ title: appStore.locale === 'en' ? 'Select available time slot' : '请选择可预约时间', icon: 'none' });
     return;
   }
   showTimePicker.value = false;
@@ -200,15 +232,15 @@ const toLocalIso = (date: Date) => new Date(date.getTime() - date.getTimezoneOff
 const submitOrder = async () => {
   if (!companion.value) return;
   if (!selectedDateTime.value || isSlotDisabled(selectedTime.value)) {
-    uni.showToast({ title: '请选择可预约时间', icon: 'none' });
+    uni.showToast({ title: appStore.locale === 'en' ? 'Select booking time first' : '请选择可预约时间', icon: 'none' });
     return;
   }
   if (!customerWechat.value.trim()) {
-    uni.showToast({ title: '请填写微信号或手机号', icon: 'none' });
+    uni.showToast({ title: appStore.locale === 'en' ? 'Please enter WeChat or Phone' : '请填写微信号或手机号', icon: 'none' });
     return;
   }
   if (!address.value.trim()) {
-    uni.showToast({ title: '请填写服务地址', icon: 'none' });
+    uni.showToast({ title: appStore.locale === 'en' ? 'Please enter service location' : '请填写服务地址', icon: 'none' });
     return;
   }
 
@@ -242,14 +274,17 @@ const submitOrder = async () => {
 .container {
   min-height: 100vh;
   background-color: $bg-color-page;
-  padding: 20rpx;
-  padding-bottom: 150rpx;
+  padding: 24rpx;
+  padding-bottom: 160rpx;
+  box-sizing: border-box;
 }
 
 .companion-card, .form-group {
   background-color: $bg-color-white;
   border-radius: $border-radius-lg;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
+  box-shadow: $box-shadow-sm;
+  border: 1px solid $border-color-light;
 }
 
 .companion-card {
@@ -266,10 +301,22 @@ const submitOrder = async () => {
 
   .info {
     flex: 1;
-    .name-box { display: flex; align-items: center; margin-bottom: 18rpx; }
-    .name { font-size: $font-size-lg; font-weight: bold; margin-right: 16rpx; }
-    .tag { font-size: 20rpx; color: $color-primary; background: rgba(124, 58, 237, 0.1); padding: 4rpx 12rpx; border-radius: $border-radius-sm; }
-    .price { color: $color-secondary; font-weight: bold; }
+    .name-box { display: flex; align-items: center; margin-bottom: 12rpx; }
+    .name { font-size: $font-size-lg; font-weight: bold; margin-right: 16rpx; color: $text-color-primary; }
+    .tag { 
+      font-size: 20rpx; 
+      color: $color-primary; 
+      background: rgba(255, 59, 92, 0.08); 
+      padding: 4rpx 14rpx; 
+      border-radius: $border-radius-pill;
+      font-weight: 500;
+    }
+    .price { 
+      color: $color-primary; 
+      font-weight: bold; 
+      font-size: $font-size-base;
+      font-family: 'Outfit', sans-serif;
+    }
   }
 }
 
@@ -278,25 +325,38 @@ const submitOrder = async () => {
 
   .section-title {
     padding: 30rpx 0;
-    border-bottom: 1rpx solid $border-color-light;
+    border-bottom: 1px solid $border-color-light;
     font-weight: bold;
     color: $text-color-primary;
+    font-size: $font-size-base;
   }
 }
 
 .form-item {
   display: flex;
   align-items: center;
-  padding: 24rpx 0;
+  padding: 28rpx 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+
+  &:last-child {
+    border-bottom: none;
+  }
 
   &.vertical {
     display: block;
-    .label { display: block; width: auto; margin-bottom: 16rpx; }
+    border-bottom: none;
+    .label { display: block; width: auto; margin-bottom: 16rpx; font-weight: bold; }
   }
 
-  .label { width: 180rpx; font-size: $font-size-base; color: $text-color-regular; }
-  .value { flex: 1; text-align: right; margin-right: 10rpx; font-size: $font-size-base; }
-  .placeholder { color: $text-color-placeholder; }
+  .label { width: 180rpx; font-size: $font-size-base; color: $text-color-primary; }
+  .value { 
+    flex: 1; 
+    text-align: right; 
+    margin-right: 10rpx; 
+    font-size: $font-size-base;
+    color: $text-color-regular;
+  }
+  .placeholder { color: $text-color-secondary; }
   .icon-arrow-right { font-size: 24rpx; color: $text-color-secondary; }
 }
 
@@ -304,13 +364,19 @@ const submitOrder = async () => {
   width: 100%;
   background-color: $bg-color-page;
   border-radius: $border-radius-md;
-  padding: 0 20rpx;
+  padding: 0 24rpx;
   box-sizing: border-box;
   font-size: $font-size-sm;
+  color: $text-color-primary;
+  border: 1px solid $border-color-light;
 }
 
-.std-input { height: 76rpx; }
-textarea { height: 120rpx; padding-top: 18rpx; }
+.std-placeholder {
+  color: $text-color-secondary;
+}
+
+.std-input { height: 84rpx; }
+textarea { height: 140rpx; padding-top: 20rpx; }
 
 .stepper {
   flex: 1;
@@ -319,8 +385,8 @@ textarea { height: 120rpx; padding-top: 18rpx; }
   align-items: center;
 
   .step-btn {
-    width: 60rpx;
-    height: 60rpx;
+    width: 64rpx;
+    height: 64rpx;
     background-color: $bg-color-page;
     display: flex;
     justify-content: center;
@@ -328,14 +394,18 @@ textarea { height: 120rpx; padding-top: 18rpx; }
     border-radius: $border-radius-sm;
     font-size: 32rpx;
     font-weight: bold;
+    color: $text-color-primary;
+    border: 1px solid $border-color-light;
 
-    &.disabled { color: $text-color-placeholder; }
+    &.disabled { color: $text-color-secondary; opacity: 0.6; }
   }
 
   .hour-input {
     width: 90rpx;
     text-align: center;
     font-weight: bold;
+    color: $text-color-primary;
+    font-family: 'Outfit', sans-serif;
   }
 }
 
@@ -344,17 +414,26 @@ textarea { height: 120rpx; padding-top: 18rpx; }
 .cost-row {
   display: flex;
   justify-content: space-between;
-  padding: 16rpx 0;
+  padding: 20rpx 0;
+  font-size: $font-size-sm;
 
-  .label { color: $text-color-regular; font-size: $font-size-sm; }
-  .value { font-weight: bold; }
+  .label { color: $text-color-regular; }
+  .value { 
+    font-weight: bold; 
+    color: $text-color-primary;
+    font-family: 'Outfit', sans-serif;
+  }
 
   &.total {
-    border-top: 1rpx solid $border-color-light;
+    border-top: 1px solid $border-color-light;
     margin-top: 10rpx;
-    padding-top: 24rpx;
+    padding-top: 28rpx;
 
-    .highlight { color: $color-secondary; font-size: 36rpx; }
+    .highlight { 
+      color: $color-primary; 
+      font-size: 38rpx; 
+      font-weight: 800;
+    }
   }
 }
 
@@ -362,10 +441,10 @@ textarea { height: 120rpx; padding-top: 18rpx; }
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20rpx;
+  padding: 30rpx 20rpx;
 
-  .icon-safe { color: $color-success; margin-right: 8rpx; }
-  text { font-size: 22rpx; color: $text-color-secondary; }
+  .icon-safe { color: $color-success; margin-right: 12rpx; font-size: 28rpx; }
+  text { font-size: 22rpx; color: $text-color-secondary; line-height: 1.4; }
 }
 
 .bottom-bar {
@@ -379,26 +458,34 @@ textarea { height: 120rpx; padding-top: 18rpx; }
   justify-content: space-between;
   align-items: center;
   padding: 0 30rpx;
-  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.05);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.04);
   z-index: $z-index-sticky;
+  border-top: 1px solid $border-color-light;
 
   .total-box {
     display: flex;
     align-items: baseline;
-    .label { color: $text-color-primary; }
-    .price { color: $color-secondary; font-size: 44rpx; font-weight: bold; }
+    .label { color: $text-color-primary; font-size: $font-size-sm; }
+    .price { 
+      color: $color-primary; 
+      font-size: 46rpx; 
+      font-weight: 800;
+      font-family: 'Outfit', sans-serif;
+    }
   }
 
   .pay-btn {
     width: 280rpx;
-    height: 88rpx;
+    height: 84rpx;
     background: $gradient-primary;
     color: #fff;
     border-radius: $border-radius-pill;
-    font-size: 32rpx;
+    font-size: 30rpx;
     font-weight: bold;
     border: none;
     margin: 0;
+    line-height: 84rpx;
 
     &::after { display: none; }
   }
@@ -407,7 +494,7 @@ textarea { height: 120rpx; padding-top: 18rpx; }
 .time-mask {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.45);
+  background: rgba(0, 0, 0, 0.5);
   z-index: 999;
   display: flex;
   align-items: flex-end;
@@ -415,11 +502,11 @@ textarea { height: 120rpx; padding-top: 18rpx; }
 
 .time-panel {
   width: 100%;
-  max-height: 78vh;
+  max-height: 80vh;
   background: #fff;
-  border-radius: 28rpx 28rpx 0 0;
-  padding: 28rpx;
-  padding-bottom: calc(28rpx + env(safe-area-inset-bottom));
+  border-radius: 40rpx 40rpx 0 0;
+  padding: 40rpx 30rpx;
+  padding-bottom: calc(40rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
 }
 
@@ -427,20 +514,22 @@ textarea { height: 120rpx; padding-top: 18rpx; }
   text-align: center;
   font-weight: bold;
   font-size: 32rpx;
-  margin-bottom: 22rpx;
+  margin-bottom: 30rpx;
+  color: $text-color-primary;
 }
 
 .date-tabs {
   white-space: nowrap;
-  margin-bottom: 24rpx;
+  margin-bottom: 30rpx;
 
   .date-tab {
     display: inline-block;
-    padding: 16rpx 24rpx;
-    margin-right: 12rpx;
-    font-size: 28rpx;
+    padding: 16rpx 28rpx;
+    margin-right: 16rpx;
+    font-size: 26rpx;
     color: $text-color-regular;
-    border-bottom: 4rpx solid transparent;
+    border-bottom: 6rpx solid transparent;
+    transition: all 0.2s ease;
 
     &.active {
       color: $color-primary;
@@ -453,23 +542,26 @@ textarea { height: 120rpx; padding-top: 18rpx; }
 .slot-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14rpx;
-  max-height: 560rpx;
+  gap: 16rpx;
+  max-height: 480rpx;
   overflow: auto;
+  padding-bottom: 20rpx;
 }
 
 .slot {
-  height: 92rpx;
-  border: 1rpx solid $border-color;
+  height: 96rpx;
+  border: 1px solid $border-color-light;
   border-radius: $border-radius-md;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: $text-color-regular;
+  color: $text-color-primary;
+  background-color: $bg-color-page;
+  transition: all 0.1s ease;
 
-  text:first-child { font-size: 30rpx; margin-bottom: 4rpx; }
-  text:last-child { font-size: 22rpx; }
+  .slot-time { font-size: 28rpx; margin-bottom: 4rpx; font-weight: bold; font-family: 'Outfit', sans-serif; }
+  .slot-status { font-size: 20rpx; opacity: 0.8; }
 
   &.active {
     background: $gradient-primary;
@@ -478,18 +570,43 @@ textarea { height: 120rpx; padding-top: 18rpx; }
   }
 
   &.disabled {
-    background: #F3F4F6;
-    color: $text-color-placeholder;
+    background: rgba(0, 0, 0, 0.04);
+    color: $text-color-secondary;
+    opacity: 0.5;
+    border-color: transparent;
   }
 }
 
 .panel-confirm {
-  margin-top: 24rpx;
+  margin-top: 30rpx;
   height: 88rpx;
   line-height: 88rpx;
   background: $gradient-primary;
   color: #fff;
   border-radius: $border-radius-pill;
   font-weight: bold;
+  font-size: 30rpx;
+}
+
+/* 深色模式特异优化 */
+.theme-dark {
+  .time-panel {
+    background-color: var(--bg-card);
+  }
+  .slot {
+    border-color: rgba(255, 255, 255, 0.05);
+    background-color: rgba(255, 255, 255, 0.02);
+    &.disabled {
+      background: rgba(255, 255, 255, 0.03);
+      color: var(--text-muted);
+    }
+    &.active {
+      background: $gradient-primary;
+      color: #fff;
+    }
+  }
+  .pay-btn, .panel-confirm {
+    box-shadow: 0 6px 20px rgba(255, 59, 92, 0.25);
+  }
 }
 </style>

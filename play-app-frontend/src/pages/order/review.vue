@@ -1,7 +1,7 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass">
     <view class="card rating-card">
-      <view class="title">为本次服务打分</view>
+      <view class="title">{{ appStore.locale === 'en' ? 'Rate This Service' : '为本次服务打分' }}</view>
       <view class="stars">
         <text 
           class="iconfont" 
@@ -15,11 +15,13 @@
     </view>
 
     <view class="card content-card">
-      <textarea v-model="content" placeholder="搭子服务怎么样？满足你的期待吗？写下评价帮助更多人参考吧~" maxlength="500"></textarea>
+      <textarea v-model="content" :placeholder="appStore.locale === 'en' ? 'How was the companion? Write down your feedback to help others booking...' : '搭子服务怎么样？满足你的期待吗？写下评价帮助更多人参考吧~'" placeholder-class="std-placeholder" maxlength="500"></textarea>
     </view>
 
     <view class="submit-wrap">
-      <button class="submit-btn" @click="submitReview" :loading="isSubmitting">发布评价</button>
+      <button class="submit-btn" @click="submitReview" :loading="isSubmitting" hover-class="button-hover">
+        {{ appStore.locale === 'en' ? 'Submit Review' : '发布评价' }}
+      </button>
     </view>
   </view>
 </template>
@@ -28,17 +30,22 @@
 import { computed, ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
+const appStore = useAppStore();
 const orderNo = ref('');
 const rating = ref(5);
 const content = ref('');
 const isSubmitting = ref(false);
 
 const ratingText = computed(() => {
-  const map: Record<number, string> = {
-    1: '非常差', 2: '较差', 3: '一般', 4: '满意', 5: '非常满意'
+  const textMap: Record<string, Record<number, string>> = {
+    'zh-Hans': { 1: '非常差', 2: '较差', 3: '一般', 4: '满意', 5: '非常满意' },
+    'zh-Hant': { 1: '非常差', 2: '较差', 3: '一般', 4: '满意', 5: '非常满意' },
+    'en': { 1: 'Very Bad', 2: 'Bad', 3: 'Average', 4: 'Good', 5: 'Excellent' }
   };
-  return map[rating.value] || '';
+  return textMap[appStore.locale]?.[rating.value] || '';
 });
 
 onLoad((options: any) => {
@@ -47,7 +54,10 @@ onLoad((options: any) => {
 
 const submitReview = async () => {
   if (!orderNo.value) return;
-  if (rating.value < 1) return uni.showToast({ title: '请先打分', icon: 'none' });
+  if (rating.value < 1) {
+    uni.showToast({ title: appStore.locale === 'en' ? 'Please select a rating' : '请先打分', icon: 'none' });
+    return;
+  }
 
   isSubmitting.value = true;
   try {
@@ -61,9 +71,8 @@ const submitReview = async () => {
     });
 
     if (res.code === 200) {
-      uni.showToast({ title: '评价成功', icon: 'success' });
+      uni.showToast({ title: t('common.success'), icon: 'success' });
       setTimeout(() => {
-        // 返回订单列表
         uni.navigateBack({ delta: 1 });
       }, 1500);
     }
@@ -77,14 +86,17 @@ const submitReview = async () => {
 .container {
   min-height: 100vh;
   background-color: $bg-color-page;
-  padding: 20rpx;
+  padding: 24rpx;
+  box-sizing: border-box;
 }
 
 .card {
   background-color: $bg-color-white;
   border-radius: $border-radius-lg;
-  padding: 40rpx 30rpx;
-  margin-bottom: 20rpx;
+  padding: 48rpx 30rpx;
+  margin-bottom: 24rpx;
+  box-shadow: $box-shadow-sm;
+  border: 1px solid $border-color-light;
 }
 
 .rating-card {
@@ -92,18 +104,22 @@ const submitReview = async () => {
   flex-direction: column;
   align-items: center;
   
-  .title { font-size: $font-size-base; font-weight: bold; margin-bottom: 30rpx; color: $text-color-primary; }
+  .title { font-size: $font-size-base; font-weight: bold; margin-bottom: 36rpx; color: $text-color-primary; }
   
   .stars {
     display: flex;
     justify-content: center;
-    margin-bottom: 20rpx;
+    margin-bottom: 24rpx;
     
     .iconfont {
-      font-size: 64rpx;
-      color: #E5E7EB;
-      margin: 0 10rpx;
-      transition: color 0.3s;
+      font-size: 72rpx;
+      color: rgba(0, 0, 0, 0.08);
+      margin: 0 12rpx;
+      transition: color 0.2s ease, transform 0.1s ease;
+      
+      &:active {
+        transform: scale(0.9);
+      }
       
       &.active { color: $color-warning; }
     }
@@ -117,12 +133,19 @@ const submitReview = async () => {
 }
 
 .content-card {
+  padding: 30rpx;
+  
   textarea {
     width: 100%;
-    height: 300rpx;
+    height: 320rpx;
     font-size: $font-size-base;
-    line-height: 1.5;
+    line-height: 1.6;
+    color: $text-color-primary;
   }
+}
+
+.std-placeholder {
+  color: $text-color-secondary;
 }
 
 .submit-wrap {
@@ -136,8 +159,28 @@ const submitReview = async () => {
     font-size: 32rpx;
     font-weight: bold;
     border: none;
+    height: 90rpx;
+    line-height: 90rpx;
+    transition: all 0.1s ease;
     
     &::after { display: none; }
+    
+    &.button-hover {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+  }
+}
+
+/* 深色模式特异微调 */
+.theme-dark {
+  .stars {
+    .iconfont {
+      color: rgba(255, 255, 255, 0.15);
+    }
+  }
+  .submit-btn {
+    box-shadow: 0 6px 20px rgba(255, 59, 92, 0.25);
   }
 }
 </style>

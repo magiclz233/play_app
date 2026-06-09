@@ -1,26 +1,28 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass">
     <view class="pay-header">
-      <text class="time-limit">支付剩余时间 14:59</text>
+      <text class="time-limit">{{ appStore.locale === 'en' ? 'Time Remaining 14:59' : '支付剩余时间 14:59' }}</text>
       <view class="amount-box">
         <text class="currency">¥</text>
         <text class="amount">{{ amount }}</text>
       </view>
-      <text class="order-no">订单号：{{ orderNo }}</text>
+      <text class="order-no">No. {{ orderNo }}</text>
     </view>
 
     <view class="pay-methods">
       <view class="method-item">
         <view class="method-info">
           <text class="iconfont icon-wechat-pay"></text>
-          <text class="name">微信支付</text>
+          <text class="name">{{ appStore.locale === 'en' ? 'WeChat Pay' : '微信支付' }}</text>
         </view>
         <radio checked color="#10B981"></radio>
       </view>
     </view>
 
     <view class="bottom-bar">
-      <button class="pay-btn" @click="doPay" :loading="isPaying">确认支付 ¥{{ amount }}</button>
+      <button class="pay-btn" @click="doPay" :loading="isPaying" hover-class="button-hover">
+        {{ appStore.locale === 'en' ? 'Confirm Payment ¥' : '确认支付 ¥' }}{{ amount }}
+      </button>
     </view>
   </view>
 </template>
@@ -28,8 +30,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import {request} from '../../utils/request';
+import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
+const appStore = useAppStore();
 const orderNo = ref('');
 const amount = ref('0.00');
 const isPaying = ref(false);
@@ -44,7 +49,6 @@ const doPay = async () => {
   
   isPaying.value = true;
   try {
-    // 1. 获取后端 prepay 参数
     const res = await request({
       url: `/orders/${orderNo.value}/prepay`,
       method: 'POST'
@@ -53,12 +57,11 @@ const doPay = async () => {
     if (res.code === 200) {
       const payInfo = res.data;
       
-      // MVP阶段防拦截，如果后端返回 mock=true，则直接跳转成功
       if (payInfo.mock) {
-        uni.showLoading({ title: '模拟支付中...' });
+        uni.showLoading({ title: appStore.locale === 'en' ? 'Processing Pay...' : '模拟支付中...' });
         setTimeout(() => {
           uni.hideLoading();
-          uni.showToast({ title: '支付成功', icon: 'success' });
+          uni.showToast({ title: t('common.success'), icon: 'success' });
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/order/list' });
           }, 1500);
@@ -66,7 +69,6 @@ const doPay = async () => {
         return;
       }
 
-      // 2. 真实环境调用微信原生支付组件
       uni.requestPayment({
         provider: 'wxpay',
         timeStamp: payInfo.timeStamp,
@@ -75,15 +77,14 @@ const doPay = async () => {
         signType: payInfo.signType,
         paySign: payInfo.paySign,
         success: () => {
-          uni.showToast({ title: '支付成功', icon: 'success' });
+          uni.showToast({ title: t('common.success'), icon: 'success' });
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/order/list' });
           }, 1500);
         },
         fail: (err) => {
           console.error('支付失败', err);
-          uni.showToast({ title: '支付取消或失败', icon: 'none' });
-          // 可跳转到订单列表页去继续支付
+          uni.showToast({ title: appStore.locale === 'en' ? 'Payment Cancelled' : '支付取消或失败', icon: 'none' });
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/order/list' });
           }, 1500);
@@ -100,6 +101,7 @@ const doPay = async () => {
 .container {
   min-height: 100vh;
   background-color: $bg-color-page;
+  box-sizing: border-box;
 }
 
 .pay-header {
@@ -107,38 +109,52 @@ const doPay = async () => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 60rpx 0;
-  margin-bottom: 20rpx;
+  padding: 80rpx 0;
+  margin-bottom: 24rpx;
+  box-shadow: $box-shadow-sm;
+  border-bottom: 1px solid $border-color-light;
   
   .time-limit {
     font-size: $font-size-sm;
     color: $text-color-secondary;
-    margin-bottom: 20rpx;
+    margin-bottom: 24rpx;
   }
   
   .amount-box {
     color: $text-color-primary;
-    margin-bottom: 20rpx;
+    margin-bottom: 24rpx;
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
     
-    .currency { font-size: 40rpx; font-weight: bold; }
-    .amount { font-size: 80rpx; font-weight: bold; margin-left: 8rpx; }
+    .currency { font-size: 44rpx; font-weight: 800; }
+    .amount { 
+      font-size: 88rpx; 
+      font-weight: 800; 
+      margin-left: 8rpx; 
+      font-family: 'Outfit', sans-serif;
+    }
   }
   
   .order-no {
-    font-size: 20rpx;
-    color: $text-color-placeholder;
+    font-size: 22rpx;
+    color: $text-color-secondary;
+    font-family: monospace;
   }
 }
 
 .pay-methods {
   background-color: $bg-color-white;
   padding: 0 30rpx;
+  box-shadow: $box-shadow-sm;
+  border-top: 1px solid $border-color-light;
+  border-bottom: 1px solid $border-color-light;
   
   .method-item {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 30rpx 0;
+    padding: 36rpx 0;
     
     .method-info {
       display: flex;
@@ -153,6 +169,7 @@ const doPay = async () => {
       .name {
         font-size: $font-size-base;
         color: $text-color-primary;
+        font-weight: bold;
       }
     }
   }
@@ -166,11 +183,12 @@ const doPay = async () => {
   padding: 30rpx;
   padding-bottom: calc(30rpx + env(safe-area-inset-bottom));
   background-color: $bg-color-white;
+  border-top: 1px solid $border-color-light;
   
   .pay-btn {
     width: 100%;
     height: 96rpx;
-    background-color: #10B981; // 微信绿
+    background-color: #10B981;
     color: #fff;
     border-radius: $border-radius-pill;
     font-size: 32rpx;
@@ -179,9 +197,21 @@ const doPay = async () => {
     justify-content: center;
     align-items: center;
     border: none;
+    transition: all 0.1s ease;
     
     &::after { display: none; }
-    &:active { opacity: 0.9; }
+    
+    &.button-hover {
+      transform: scale(0.98);
+      opacity: 0.9;
+    }
+  }
+}
+
+/* 暗色模式特殊发光处理 */
+.theme-dark {
+  .pay-btn {
+    box-shadow: 0 8px 24px rgba(16, 185, 129, 0.25);
   }
 }
 </style>

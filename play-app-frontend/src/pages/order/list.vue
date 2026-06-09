@@ -1,52 +1,64 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass">
     <view class="tabs">
-      <view class="tab" :class="{ active: currentTab === '' }" @click="switchTab('')">全部</view>
-      <view class="tab" :class="{ active: currentTab === '10' }" @click="switchTab('10')">待支付</view>
-      <view class="tab" :class="{ active: currentTab === '20' }" @click="switchTab('20')">待服务</view>
-      <view class="tab" :class="{ active: currentTab === '50' }" @click="switchTab('50')">服务中</view>
-      <view class="tab" :class="{ active: currentTab === '80' }" @click="switchTab('80')">已完成</view>
+      <view class="tab" :class="{ active: currentTab === '' }" @click="switchTab('')" hover-class="tab-hover">
+        {{ t('mine.allOrders') }}
+      </view>
+      <view class="tab" :class="{ active: currentTab === '10' }" @click="switchTab('10')" hover-class="tab-hover">
+        {{ t('mine.waitingPay') }}
+      </view>
+      <view class="tab" :class="{ active: currentTab === '20' }" @click="switchTab('20')" hover-class="tab-hover">
+        {{ t('mine.waitingAccept') }}
+      </view>
+      <view class="tab" :class="{ active: currentTab === '50' }" @click="switchTab('50')" hover-class="tab-hover">
+        {{ t('mine.inProgress') }}
+      </view>
+      <view class="tab" :class="{ active: currentTab === '80' }" @click="switchTab('80')" hover-class="tab-hover">
+        {{ t('order.status.210') }}
+      </view>
     </view>
 
     <scroll-view scroll-y class="list-content" @scrolltolower="loadMore" :refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onRefresh">
       <view class="order-list" v-if="orderList.length > 0">
-        <view class="order-card" v-for="item in orderList" :key="item.orderNo" @click="goToDetail(item.orderNo)">
+        <view class="order-card" v-for="item in orderList" :key="item.orderNo" @click="goToDetail(item.orderNo)" hover-class="card-hover">
           <view class="card-header">
-            <text class="order-no">订单号: {{ item.orderNo }}</text>
+            <text class="order-no">No. {{ item.orderNo }}</text>
             <text class="status" :class="'status-' + item.status">{{ getStatusText(item.status) }}</text>
           </view>
 
           <view class="card-body">
             <view class="service-info">
-              <view class="title">同城伴玩服务</view>
-              <view class="time">预约: {{ item.reserveDate }} {{ item.reserveTimeStart }}{{ item.reserveTimeEnd ? '-' + item.reserveTimeEnd : '' }}</view>
-              <view class="duration">时长: {{ item.hours }} 小时</view>
-              <view class="duration" v-if="item.address">地址: {{ item.address }}</view>
+              <view class="title">{{ t('lobby.title') }}{{ t('detail.orderLabel') }}</view>
+              <view class="time">{{ t('order.time') }}: {{ item.reserveDate }} {{ item.reserveTimeStart }}{{ item.reserveTimeEnd ? '-' + item.reserveTimeEnd : '' }}</view>
+              <view class="duration">
+                {{ t('order.duration') }}: {{ item.hours }} {{ appStore.locale === 'en' ? 'Hrs' : '小时' }}
+              </view>
+              <view class="duration" v-if="item.address">{{ t('order.reserveAddress') }}: {{ item.address }}</view>
             </view>
             <view class="price-info">
-              <text class="label">实付款</text>
+              <text class="label">{{ t('order.amount') }}</text>
               <text class="price">¥{{ item.totalAmount }}</text>
             </view>
           </view>
 
           <view class="card-footer" v-if="hasActions(item.status)">
-            <button class="action-btn" v-if="item.status === 10" @click.stop="goToPay(item)">去支付</button>
-            <button class="action-btn" v-if="canRefund(item.status)" @click.stop="goToRefund(item.orderNo)">申请退款</button>
-            <button class="action-btn primary" v-if="item.status === 60" @click.stop="confirmOrder(item.orderNo)">确认完工</button>
-            <button class="action-btn primary" v-if="item.status === 70 || item.status === 80" @click.stop="goToReview(item.orderNo)">去评价</button>
+            <button class="action-btn" v-if="item.status === 10" @click.stop="goToPay(item)" hover-class="button-hover">{{ t('mine.waitingPay') }}</button>
+            <button class="action-btn" v-if="canRefund(item.status)" @click.stop="goToRefund(item.orderNo)" hover-class="button-hover">{{ t('order.actionRefund') }}</button>
+            <button class="action-btn primary" v-if="item.status === 60" @click.stop="confirmOrder(item.orderNo)" hover-class="button-hover">{{ t('order.actionConfirm') }}</button>
+            <button class="action-btn primary" v-if="item.status === 70 || item.status === 80" @click.stop="goToReview(item.orderNo)" hover-class="button-hover">{{ t('order.actionReview') }}</button>
           </view>
         </view>
       </view>
 
       <view class="empty-state" v-else-if="!loading">
-        <text>暂无订单记录</text>
+        <text>{{ t('lobby.emptyRequests') }}</text>
       </view>
 
       <view class="loading-state" v-if="loading && orderList.length > 0">
-        <text>加载中...</text>
+        <text>{{ t('common.loading') }}</text>
       </view>
       <view class="loading-state" v-if="noMore && orderList.length > 0">
-        <text>没有更多数据了</text>
+        <text>{{ t('common.noMore') }}</text>
       </view>
     </scroll-view>
   </view>
@@ -54,9 +66,12 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { onLoad } from '@dcloudio/uni-app';
-import {request} from '../../utils/request';
+import { onLoad, onShow } from '@dcloudio/uni-app';
+import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
+const appStore = useAppStore();
 const orderList = ref<any[]>([]);
 const currentTab = ref('');
 const current = ref(1);
@@ -67,6 +82,9 @@ const isRefreshing = ref(false);
 
 onLoad((options: any) => {
   if (options?.status) currentTab.value = options.status;
+});
+
+onShow(() => {
   fetchList(true);
 });
 
@@ -118,12 +136,8 @@ const loadMore = () => {
 };
 
 const getStatusText = (status: number) => {
-  const map: Record<number, string> = {
-    10: '待付款', 20: '待拉群', 30: '已拉群', 40: '双方确认',
-    50: '服务中', 60: '待确认', 70: '待评价/待结算', 80: '已完成',
-    100: '退款申请中', 110: '退款处理中', 120: '已退款', 130: '部分退款', 250: '已关闭'
-  };
-  return map[status] || '未知';
+  const text = t(`order.status.${status}`);
+  return text.includes('order.status.') ? t('common.status') : text;
 };
 
 const goToDetail = (orderNo: string) => {
@@ -136,8 +150,10 @@ const goToPay = (item: any) => {
 
 const confirmOrder = (orderNo: string) => {
   uni.showModal({
-    title: '确认完工',
-    content: '确认服务已经完成了吗？确认后平台将进入结算流程。',
+    title: t('order.actionConfirm'),
+    content: appStore.locale === 'en' ? 'Are you sure this service is completed?' : '确认服务已经完成了吗？确认后平台将进入结算流程。',
+    confirmText: t('common.confirm'),
+    cancelText: t('common.cancel'),
     success: async (res) => {
       if (res.confirm) {
         const confirmRes = await request({
@@ -145,7 +161,7 @@ const confirmOrder = (orderNo: string) => {
           method: 'PUT'
         });
         if (confirmRes.code === 200) {
-          uni.showToast({ title: '确认成功' });
+          uni.showToast({ title: t('common.success') });
           fetchList(true);
         }
       }
@@ -167,7 +183,7 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
 
 <style lang="scss" scoped>
 .container {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: $bg-color-page;
@@ -176,16 +192,18 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
 .tabs {
   display: flex;
   background-color: $bg-color-white;
-  padding: 0 20rpx;
+  padding: 0 10rpx;
   z-index: $z-index-sticky;
+  border-bottom: 1px solid $border-color-light;
   
   .tab {
     flex: 1;
     text-align: center;
-    padding: 24rpx 0;
-    font-size: $font-size-base;
+    padding: 28rpx 0;
+    font-size: $font-size-sm;
     color: $text-color-regular;
     position: relative;
+    transition: all 0.2s ease;
     
     &.active {
       color: $color-primary;
@@ -197,12 +215,16 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
         bottom: 0;
         left: 50%;
         transform: translateX(-50%);
-        width: 40rpx;
+        width: 36rpx;
         height: 6rpx;
         background: $gradient-primary;
-        border-radius: 4rpx;
+        border-radius: 3rpx;
       }
     }
+  }
+
+  .tab-hover {
+    opacity: 0.7;
   }
 }
 
@@ -212,24 +234,36 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
 }
 
 .order-list {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 
 .order-card {
   background-color: $bg-color-white;
   border-radius: $border-radius-lg;
   padding: 30rpx;
-  margin-bottom: 20rpx;
+  margin-bottom: 24rpx;
+  box-shadow: $box-shadow-sm;
+  border: 1px solid $border-color-light;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
   
+  &.card-hover {
+    transform: scale(0.995);
+    box-shadow: none;
+  }
+
   .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    border-bottom: 1rpx solid $border-color-light;
+    border-bottom: 1px solid $border-color-light;
     padding-bottom: 20rpx;
     margin-bottom: 20rpx;
     
-    .order-no { font-size: $font-size-sm; color: $text-color-secondary; }
+    .order-no { 
+      font-size: $font-size-sm; 
+      color: $text-color-secondary;
+      font-family: monospace; 
+    }
     
     .status {
       font-size: $font-size-sm;
@@ -239,7 +273,7 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
       &.status-20 { color: $color-warning; }
       &.status-30 { color: $color-primary; }
       &.status-40, &.status-50 { color: $color-success; }
-      &.status-90 { color: $text-color-secondary; }
+      &.status-80, &.status-210 { color: $text-color-secondary; }
     }
   }
   
@@ -249,15 +283,20 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
     align-items: center;
     
     .service-info {
-      .title { font-size: $font-size-base; font-weight: bold; color: $text-color-primary; margin-bottom: 10rpx; }
-      .time, .duration { font-size: $font-size-sm; color: $text-color-regular; margin-bottom: 6rpx; }
+      .title { font-size: $font-size-base; font-weight: bold; color: $text-color-primary; margin-bottom: 12rpx; }
+      .time, .duration { font-size: $font-size-sm; color: $text-color-regular; margin-bottom: 8rpx; }
     }
     
     .price-info {
       text-align: right;
       
-      .label { font-size: $font-size-sm; color: $text-color-secondary; display: block; margin-bottom: 6rpx; }
-      .price { font-size: 36rpx; font-weight: bold; color: $text-color-primary; }
+      .label { font-size: $font-size-xs; color: $text-color-secondary; display: block; margin-bottom: 6rpx; }
+      .price { 
+        font-size: 34rpx; 
+        font-weight: bold; 
+        color: $text-color-primary;
+        font-family: 'Outfit', -apple-system, sans-serif;
+      }
     }
   }
   
@@ -270,20 +309,28 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
       margin: 0;
       margin-left: 20rpx;
       padding: 0 32rpx;
-      height: 60rpx;
-      line-height: 60rpx;
+      height: 64rpx;
+      line-height: 62rpx;
       border-radius: $border-radius-pill;
       font-size: $font-size-sm;
-      background-color: $bg-color-white;
-      color: $text-color-regular;
-      border: 1rpx solid $border-color;
+      background-color: rgba(255, 255, 255, 0.05);
+      color: $text-color-primary;
+      border: 1px solid $border-color;
+      box-sizing: border-box;
+      transition: all 0.1s ease;
       
       &::after { display: none; }
+      
+      &.button-hover {
+        transform: scale(0.97);
+        opacity: 0.9;
+      }
       
       &.primary {
         background: $gradient-primary;
         color: #fff;
         border: none;
+        line-height: 64rpx;
       }
     }
   }
@@ -294,10 +341,9 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding-top: 200rpx;
+  padding-top: 240rpx;
   color: $text-color-secondary;
-  
-  .icon-empty { font-size: 120rpx; margin-bottom: 20rpx; color: $border-color; }
+  font-size: $font-size-base;
 }
 
 .loading-state {
@@ -305,5 +351,19 @@ const hasActions = (status: number) => status === 10 || status === 60 || status 
   padding: 30rpx 0;
   font-size: 24rpx;
   color: $text-color-secondary;
+}
+
+/* 深色模式按钮及背景专项微调 */
+.theme-dark {
+  .action-btn {
+    background-color: rgba(255, 255, 255, 0.05);
+    border-color: rgba(255, 255, 255, 0.1);
+    
+    &.primary {
+      background: $gradient-primary;
+      border: none;
+      box-shadow: 0 6px 20px rgba(255, 59, 92, 0.25);
+    }
+  }
 }
 </style>

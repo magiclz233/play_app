@@ -1,3 +1,5 @@
+import {t} from './i18n';
+
 export const BASE_URL = 'http://127.0.0.1:8080/api';
 const TIMEOUT = 10000; // 10秒超时
 
@@ -35,10 +37,10 @@ export const request = <T = any>(options: UniApp.RequestOptions): Promise<Result
                     resolve(data);
                 } else if (data.code === 401) {
                     uni.removeStorageSync('token');
-                    uni.showToast({ title: '请先登录', icon: 'none' });
+                    uni.showToast({ title: t('common.loginRequired'), icon: 'none' });
                     reject(data);
                 } else {
-                    uni.showToast({ title: data.message || '请求失败', icon: 'none', duration: 2000 });
+                    uni.showToast({ title: data.message || t('common.requestFailed'), icon: 'none', duration: 2000 });
                     reject(data);
                 }
             },
@@ -46,7 +48,7 @@ export const request = <T = any>(options: UniApp.RequestOptions): Promise<Result
                 // 避免重复弹窗
                 if (!showingNetworkError) {
                     showingNetworkError = true;
-                    uni.showToast({ title: '无法连接服务器，请确认后端已启动', icon: 'none', duration: 3000 });
+                    uni.showToast({ title: t('common.serverDisconnected'), icon: 'none', duration: 3000 });
                     setTimeout(() => { showingNetworkError = false; }, 3000);
                 }
                 console.error('[Request Failed]', options.url, err);

@@ -1,34 +1,34 @@
 <template>
-  <view class="container" v-if="order">
+  <view class="container" :class="appStore.themeClass" v-if="order">
     <view class="order-card">
       <view class="header-row">
-        <text class="order-no">订单号：{{ order.orderNo }}</text>
+        <text class="order-no">No. {{ order.orderNo }}</text>
         <text class="status">{{ getStatusText(order.status) }}</text>
       </view>
       <view class="service-row">
         <view class="cover">
-          <text>同城伴玩</text>
+          <text>{{ t('lobby.title') }}</text>
         </view>
         <view class="service-info">
-          <text class="title">预约服务（{{ order.hours }}小时）</text>
+          <text class="title">{{ appStore.locale === 'en' ? 'Reserve Service' : '预约服务' }}（{{ order.hours }}{{ appStore.locale === 'en' ? ' Hrs' : '小时' }}）</text>
           <text class="desc">{{ order.reserveDate }} {{ order.reserveTimeStart }}-{{ order.reserveTimeEnd || '' }}</text>
           <text class="price">¥{{ order.totalAmount }}</text>
         </view>
       </view>
       <view class="amount-row">
-        <text>退款金额</text>
+        <text>{{ appStore.locale === 'en' ? 'Refund Amount' : '退款金额' }}</text>
         <text class="amount">¥{{ order.totalAmount }}</text>
       </view>
     </view>
 
     <view class="reason-card">
-      <view class="section-title">退款原因</view>
-      <textarea v-model="reason" maxlength="200" placeholder="请输入退款原因，平台将按原支付渠道处理退款"></textarea>
+      <view class="section-title">{{ appStore.locale === 'en' ? 'Refund Reason' : '退款原因' }}</view>
+      <textarea v-model="reason" maxlength="200" :placeholder="appStore.locale === 'en' ? 'Please explain why, funds will return to original payment source.' : '请输入退款原因，平台将按原支付渠道处理退款'" placeholder-class="std-placeholder"></textarea>
     </view>
 
     <view class="bottom-bar">
-      <view class="summary">共1件 退款金额 <text>¥{{ order.totalAmount }}</text></view>
-      <button class="submit-btn" :loading="submitting" @click="submitRefund">提交申请</button>
+      <view class="summary">{{ appStore.locale === 'en' ? '1 Item, Refund ' : '共1件 退款金额 ' }}<text>¥{{ order.totalAmount }}</text></view>
+      <button class="submit-btn" :loading="submitting" @click="submitRefund" hover-class="button-hover">{{ t('common.submit') }}</button>
     </view>
   </view>
 </template>
@@ -37,7 +37,10 @@
 import { ref } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
+const appStore = useAppStore();
 const order = ref<any>(null);
 const orderNo = ref('');
 const reason = ref('');
@@ -56,15 +59,13 @@ const fetchDetail = async () => {
 };
 
 const getStatusText = (status: number) => {
-  const map: Record<number, string> = {
-    20: '待服务', 30: '已拉群', 40: '待服务', 50: '服务中', 60: '待确认', 70: '待评价', 80: '已完成', 100: '退款申请中'
-  };
-  return map[status] || String(status);
+  const text = t(`order.status.${status}`);
+  return text.includes('order.status.') ? t('common.status') : text;
 };
 
 const submitRefund = async () => {
   if (!reason.value.trim()) {
-    uni.showToast({ title: '请输入退款原因', icon: 'none' });
+    uni.showToast({ title: appStore.locale === 'en' ? 'Please enter refund reason' : '请输入退款原因', icon: 'none' });
     return;
   }
 
@@ -76,7 +77,7 @@ const submitRefund = async () => {
       data: { reason: reason.value.trim() }
     });
     if (res.code === 200) {
-      uni.showToast({ title: '已提交', icon: 'success' });
+      uni.showToast({ title: t('common.success'), icon: 'success' });
       setTimeout(() => {
         uni.redirectTo({ url: `/pages/order/detail?orderNo=${orderNo.value}` });
       }, 500);
@@ -91,15 +92,18 @@ const submitRefund = async () => {
 .container {
   min-height: 100vh;
   background: $bg-color-page;
-  padding: 20rpx;
-  padding-bottom: 140rpx;
+  padding: 24rpx;
+  padding-bottom: 150rpx;
+  box-sizing: border-box;
 }
 
 .order-card, .reason-card {
-  background: #fff;
+  background: $bg-color-white;
   border-radius: $border-radius-lg;
-  padding: 28rpx;
-  margin-bottom: 20rpx;
+  padding: 30rpx;
+  margin-bottom: 24rpx;
+  box-shadow: $box-shadow-sm;
+  border: 1px solid $border-color-light;
 }
 
 .header-row {
@@ -107,16 +111,16 @@ const submitRefund = async () => {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 22rpx;
-  border-bottom: 1rpx solid $border-color-light;
+  border-bottom: 1px solid $border-color-light;
 
-  .order-no { font-size: 28rpx; color: $text-color-primary; }
+  .order-no { font-size: $font-size-base; color: $text-color-primary; font-family: monospace; }
   .status { color: $color-success; font-size: 24rpx; font-weight: bold; }
 }
 
 .service-row {
   display: flex;
-  padding: 26rpx 0;
-  border-bottom: 1rpx solid $border-color-light;
+  padding: 30rpx 0;
+  border-bottom: 1px solid $border-color-light;
 
   .cover {
     width: 140rpx;
@@ -136,9 +140,14 @@ const submitRefund = async () => {
     display: flex;
     flex-direction: column;
 
-    .title { font-size: 30rpx; font-weight: bold; color: $text-color-primary; margin-bottom: 12rpx; }
+    .title { font-size: 28rpx; font-weight: bold; color: $text-color-primary; margin-bottom: 12rpx; }
     .desc { font-size: 24rpx; color: $text-color-secondary; margin-bottom: 12rpx; }
-    .price { color: $color-secondary; font-size: 34rpx; font-weight: bold; }
+    .price { 
+      color: $color-primary; 
+      font-size: 34rpx; 
+      font-weight: 800; 
+      font-family: 'Outfit', sans-serif;
+    }
   }
 }
 
@@ -146,13 +155,18 @@ const submitRefund = async () => {
   display: flex;
   justify-content: space-between;
   padding-top: 24rpx;
-  font-size: 28rpx;
+  font-size: $font-size-base;
+  color: $text-color-primary;
 
-  .amount { color: $color-secondary; font-weight: bold; }
+  .amount { 
+    color: $color-primary; 
+    font-weight: 800; 
+    font-family: 'Outfit', sans-serif;
+  }
 }
 
 .section-title {
-  font-size: 30rpx;
+  font-size: $font-size-base;
   font-weight: bold;
   color: $text-color-primary;
   margin-bottom: 20rpx;
@@ -166,6 +180,12 @@ textarea {
   padding: 20rpx;
   box-sizing: border-box;
   font-size: 28rpx;
+  color: $text-color-primary;
+  border: 1px solid $border-color-light;
+}
+
+.std-placeholder {
+  color: $text-color-secondary;
 }
 
 .bottom-bar {
@@ -173,33 +193,55 @@ textarea {
   left: 0;
   right: 0;
   bottom: 0;
-  background: #fff;
+  background: $bg-color-white;
   height: 120rpx;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 24rpx;
-  box-shadow: 0 -4rpx 20rpx rgba(0,0,0,0.05);
+  padding: 0 30rpx;
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.04);
+  border-top: 1px solid $border-color-light;
+  z-index: $z-index-sticky;
 
   .summary {
-    font-size: 24rpx;
-    color: $text-color-regular;
+    font-size: $font-size-sm;
+    color: $text-color-primary;
 
-    text { color: $color-secondary; font-weight: bold; }
+    text { 
+      color: $color-primary; 
+      font-weight: 800; 
+      font-size: 34rpx;
+      font-family: 'Outfit', sans-serif;
+    }
   }
 
   .submit-btn {
     margin: 0;
-    width: 220rpx;
-    height: 76rpx;
-    line-height: 76rpx;
+    width: 240rpx;
+    height: 80rpx;
+    line-height: 80rpx;
     background: $gradient-primary;
     color: #fff;
     border-radius: $border-radius-pill;
     font-size: 28rpx;
     font-weight: bold;
+    border: none;
+    transition: all 0.1s ease;
 
     &::after { display: none; }
+    
+    &.button-hover {
+      transform: scale(0.97);
+      opacity: 0.9;
+    }
+  }
+}
+
+/* 深色模式按钮特异发光 */
+.theme-dark {
+  .submit-btn {
+    box-shadow: 0 6px 20px rgba(255, 59, 92, 0.25);
   }
 }
 </style>

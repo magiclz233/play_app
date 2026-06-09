@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
     <view class="wallet-card">
       <view class="label">可提现余额 (元)</view>
       <view class="balance">{{ wallet.balance || '0.00' }}</view>
@@ -56,7 +56,9 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
+import {useAppStore} from '../../store/app';
 
+const appStore = useAppStore();
 const wallet = ref<any>({});
 const transactions = ref<any[]>([]);
 
@@ -117,7 +119,7 @@ const formatTime = (t: string) => t ? t.replace('T', ' ').substring(0, 16) : '';
   padding: 50rpx 40rpx;
   color: #fff;
   position: relative;
-  box-shadow: 0 10rpx 30rpx rgba(124, 58, 237, 0.3);
+  box-shadow: 0 10rpx 30rpx rgba(var(--color-primary-rgb), 0.18);
   margin-bottom: 30rpx;
   
   .label { font-size: 28rpx; opacity: 0.9; margin-bottom: 10rpx; }
@@ -126,7 +128,7 @@ const formatTime = (t: string) => t ? t.replace('T', ' ').substring(0, 16) : '';
   
   .withdraw-btn {
     position: absolute; right: 40rpx; top: 50rpx;
-    background-color: #fff; color: $color-primary;
+    background-color: var(--bg-card); color: $color-primary;
     font-size: 28rpx; padding: 0 30rpx; height: 60rpx; line-height: 60rpx;
     border-radius: $border-radius-pill; font-weight: bold;
     &::after { display: none; }
@@ -167,7 +169,7 @@ const formatTime = (t: string) => t ? t.replace('T', ' ').substring(0, 16) : '';
   background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 100;
   
   .modal-content {
-    width: 600rpx; background: #fff; border-radius: $border-radius-lg; overflow: hidden;
+    width: 600rpx; background-color: var(--bg-card); color: var(--text-primary); border-radius: $border-radius-lg; overflow: hidden;
     
     .modal-header { text-align: center; padding: 30rpx; font-size: 32rpx; font-weight: bold; border-bottom: 1rpx solid $border-color-light; }
     
@@ -176,13 +178,13 @@ const formatTime = (t: string) => t ? t.replace('T', ' ').substring(0, 16) : '';
       
       .form-item {
         margin-bottom: 30rpx;
-        .label { font-size: 28rpx; color: $text-color-regular; display: block; margin-bottom: 16rpx; }
+        .label { font-size: 28rpx; color: var(--text-secondary); display: block; margin-bottom: 16rpx; }
         .input-wrap {
           display: flex; align-items: center; border-bottom: 1rpx solid $color-primary; padding-bottom: 10rpx;
           text { font-size: 48rpx; font-weight: bold; margin-right: 16rpx; }
-          input { flex: 1; font-size: 48rpx; font-weight: bold; height: 60rpx; }
+          input { flex: 1; font-size: 48rpx; font-weight: bold; height: 60rpx; color: var(--text-primary); }
         }
-        .std-input { width: 100%; height: 80rpx; background: #F3F4F6; border-radius: $border-radius-sm; padding: 0 20rpx; box-sizing: border-box; }
+        .std-input { width: 100%; height: 80rpx; background-color: var(--bg-main); color: var(--text-primary); border-radius: $border-radius-sm; padding: 0 20rpx; box-sizing: border-box; border: 1px solid var(--border-color); }
       }
     }
     
@@ -190,9 +192,9 @@ const formatTime = (t: string) => t ? t.replace('T', ' ').substring(0, 16) : '';
       display: flex; border-top: 1rpx solid $border-color-light;
       
       .btn {
-        flex: 1; height: 100rpx; line-height: 100rpx; text-align: center; font-size: 32rpx; background: #fff; border-radius: 0; margin: 0;
+        flex: 1; height: 100rpx; line-height: 100rpx; text-align: center; font-size: 32rpx; background-color: var(--bg-card); color: var(--text-primary); border-radius: 0; margin: 0;
         &::after { display: none; }
-        &.cancel { color: $text-color-regular; border-right: 1rpx solid $border-color-light; }
+        &.cancel { color: var(--text-secondary); border-right: 1rpx solid $border-color-light; }
         &.confirm { color: $color-primary; font-weight: bold; }
       }
     }

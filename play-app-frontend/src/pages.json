@@ -96,15 +96,15 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "同城伴玩",
-		"navigationBarBackgroundColor": "#F3F4F6",
-		"backgroundColor": "#F3F4F6",
+		"navigationBarBackgroundColor": "#FAF6F0",
+		"backgroundColor": "#FAF6F0",
 		"app-plus": {
-			"background": "#F3F4F6"
+			"background": "#FAF6F0"
 		}
 	},
 	"tabBar": {
 		"color": "#9CA3AF",
-		"selectedColor": "#7C3AED",
+		"selectedColor": "#FF5B71",
 		"backgroundColor": "#FFFFFF",
 		"borderStyle": "black",
 		"list": [

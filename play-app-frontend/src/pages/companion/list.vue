@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view :class="['container', appStore.themeClass]" :style="appStore.themeStyle">
     <!-- 顶部导航与筛选区 -->
     <view class="header-wrap">
       <!-- 搜索框 -->
@@ -37,7 +37,7 @@
       <view class="companion-list">
         <view class="companion-card" v-for="item in companionList" :key="item.userId" @click="goToDetail(item.userId)">
           <view class="card-cover-wrap">
-            <image :src="item.coverUrl || 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=600&auto=format&fit=crop'" mode="aspectFill" class="card-cover"></image>
+            <image :src="item.coverUrl || fallbackCover" mode="aspectFill" class="card-cover"></image>
             <view class="status-badge" :class="{ 'busy': item.workStatus === 2 }">
               <text class="dot"></text>
               <text>{{ item.workStatus === 1 ? '可接单' : (item.workStatus === 2 ? '忙碌中' : '休息中') }}</text>
@@ -76,7 +76,9 @@
 import {onLoad} from '@dcloudio/uni-app';
 import {ref} from 'vue';
 import {request} from '../../utils/request';
+import {useAppStore} from '../../store/app';
 
+const appStore = useAppStore();
 const companionList = ref<any[]>([]);
 const current = ref(1);
 const size = ref(10);
@@ -86,6 +88,7 @@ const isRefreshing = ref(false);
 const currentSort = ref('recommend');
 const categoryId = ref<string | null>(null);
 const showGenderPicker = ref(false);
+const fallbackCover = 'https://picsum.photos/seed/companion-list-cover/600/800';
 
 onLoad((options: any) => {
   categoryId.value = options?.categoryId || null;
@@ -148,21 +151,23 @@ const goToDetail = (id: number) => {
 
 <style lang="scss" scoped>
 .container {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
-  background-color: $bg-color-page;
+  background-color: var(--bg-main);
+  color: var(--text-primary);
 }
 
 .header-wrap {
-  background-color: $bg-color-white;
+  background-color: var(--bg-card);
   padding: 20rpx 0 10rpx;
   z-index: $z-index-sticky;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .search-bar {
   margin: 0 30rpx 20rpx;
-  background-color: #F3F4F6;
+  background-color: var(--bg-main);
   height: 72rpx;
   border-radius: $border-radius-pill;
   display: flex;
@@ -223,7 +228,8 @@ const goToDetail = (id: number) => {
   padding: 20rpx 30rpx;
   
   .sub-tab {
-    background-color: #F3F4F6;
+    background-color: var(--bg-main);
+    border: 1px solid var(--border-color);
     padding: 8rpx 24rpx;
     border-radius: $border-radius-pill;
     font-size: 24rpx;
@@ -245,14 +251,13 @@ const goToDetail = (id: number) => {
 }
 
 .companion-list {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 20rpx;
   padding: 20rpx;
-  justify-content: space-between;
-  
+
   .companion-card {
-    width: calc(50% - 10rpx);
-    background-color: $bg-color-white;
+    background-color: var(--bg-card);
     border-radius: $border-radius-lg;
     overflow: hidden;
     margin-bottom: 20rpx;
@@ -272,8 +277,7 @@ const goToDetail = (id: number) => {
         position: absolute;
         top: 16rpx;
         left: 16rpx;
-        background: rgba(0, 0, 0, 0.6);
-        backdrop-filter: blur(4px);
+        background: rgba(26, 22, 19, 0.62);
         border-radius: $border-radius-pill;
         padding: 4rpx 16rpx;
         display: flex;
@@ -336,7 +340,7 @@ const goToDetail = (id: number) => {
         .tag {
           font-size: 20rpx;
           color: $color-primary;
-          background-color: rgba(124, 58, 237, 0.1);
+          background-color: rgba(var(--color-primary-rgb), 0.12);
           padding: 2rpx 12rpx;
           border-radius: $border-radius-sm;
           margin-right: 8rpx;

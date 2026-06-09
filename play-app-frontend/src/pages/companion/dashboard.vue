@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
     <view class="header-bg"></view>
     
     <!-- 顶部数据概览 -->
@@ -72,7 +72,9 @@
 <script setup lang="ts">
 import {onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
+import {useAppStore} from '../../store/app';
 
+const appStore = useAppStore();
 const stats = ref<any>({});
 const orderList = ref<any[]>([]);
 const currentTab = ref('');

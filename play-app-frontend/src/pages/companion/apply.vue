@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
     <view class="status-box" v-if="applyStatus !== -1">
       <view class="status-card" :class="statusClass">
         <text class="iconfont" :class="statusIcon"></text>
@@ -114,8 +114,10 @@
 <script setup lang="ts">
 import {computed, onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
+import {useAppStore} from '../../store/app';
 
 // API Configuration
+const appStore = useAppStore();
 const UPLOAD_URL = 'http://127.0.0.1:8080/api/file/upload';
 
 const applyStatus = ref(-1); // -1: 未申请, 0: 待审核, 1: 通过, 2: 驳回
@@ -593,7 +595,7 @@ onMounted(() => {
     align-items: center;
     padding: 0 30rpx 0 10rpx;
     position: relative;
-    border: 1rpx solid rgba(124, 58, 237, 0.2);
+    border: 1rpx solid rgba(var(--color-primary-rgb), 0.2);
     
     .play-icon {
       width: 60rpx; height: 60rpx;
@@ -638,7 +640,7 @@ onMounted(() => {
       right: -20rpx;
       top: -20rpx;
       width: 40rpx; height: 40rpx;
-      background: #fff;
+      background: $bg-color-white;
       border-radius: 50%;
       box-shadow: $box-shadow-sm;
       display: flex; justify-content: center; align-items: center;
