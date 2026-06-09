@@ -81,4 +81,13 @@ public class AdminOrderController {
         orderService.adminSettleOrder(adminId, orderNo, dto == null ? null : dto.getRemark());
         return Result.success("已结算放款");
     }
+
+    @PutMapping("/{orderNo}/refund")
+    public Result<?> approveRefund(
+            @AuthenticationPrincipal Long adminId,
+            @PathVariable String orderNo,
+            @RequestBody(required = false) AdminOrderActionDTO dto) {
+        orderService.adminApproveRefund(adminId, orderNo, dto == null ? null : dto.getRemark());
+        return Result.success("已确认退款");
+    }
 }

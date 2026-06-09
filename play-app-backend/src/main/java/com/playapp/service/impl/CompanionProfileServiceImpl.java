@@ -194,6 +194,7 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
         vo.setVoiceUrl(profile.getVoiceUrl());
         vo.setVoiceDuration(profile.getVoiceDuration());
         vo.setRating(profile.getRating());
+        vo.setTotalRatingCount(profile.getTotalRatingCount());
         vo.setOrderCount(profile.getOrderCount());
         vo.setWorkStatus(profile.getWorkStatus());
         vo.setPricePerHour(getPricePerHour(id));
@@ -218,8 +219,11 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
         vo.setUserId(profile.getUserId());
         vo.setNickname(getNickname(profile));
         vo.setRating(profile.getRating());
+        vo.setTotalRatingCount(profile.getTotalRatingCount());
         vo.setPricePerHour(getPricePerHour(profile.getUserId()));
         vo.setWorkStatus(profile.getWorkStatus());
+        vo.setVoiceUrl(profile.getVoiceUrl());
+        vo.setVoiceDuration(profile.getVoiceDuration());
 
         // 封面图
         CompanionAlbum cover = companionAlbumMapper.selectOne(

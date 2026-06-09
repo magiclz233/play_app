@@ -19,6 +19,7 @@ public class CompanionDetailVO {
     
     private BigDecimal pricePerHour;
     private BigDecimal rating;
+    private Integer totalRatingCount;
     private Integer orderCount;
     private Integer workStatus;
     

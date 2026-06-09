@@ -51,6 +51,17 @@ public class CompanionWalletServiceImpl extends ServiceImpl<CompanionWalletMappe
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void addBalance(Long companionId, BigDecimal amount, Long orderId, String orderNo) {
+        Long exists = walletTransactionMapper.selectCount(
+                new LambdaQueryWrapper<WalletTransaction>()
+                        .eq(WalletTransaction::getCompanionId, companionId)
+                        .eq(WalletTransaction::getSourceType, 1)
+                        .eq(WalletTransaction::getSourceId, orderId)
+                        .eq(WalletTransaction::getTransactionType, 1));
+        if (exists != null && exists > 0) {
+            log.info("订单收益已入账，跳过重复结算: {}", orderNo);
+            return;
+        }
+
         CompanionWallet wallet = getWalletByCompanionId(companionId);
         BigDecimal balanceBefore = wallet.getBalance();
 

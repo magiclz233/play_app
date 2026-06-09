@@ -12,12 +12,15 @@ import com.playapp.entity.CompanionProfile;
 import com.playapp.entity.CompanionSkill;
 import com.playapp.entity.Order;
 import com.playapp.entity.OrderStatusLog;
+import com.playapp.entity.PaymentRecord;
 import com.playapp.entity.ServiceRecord;
 import com.playapp.entity.User;
 import com.playapp.mapper.CompanionSkillMapper;
 import com.playapp.mapper.OrderMapper;
 import com.playapp.mapper.OrderStatusLogMapper;
+import com.playapp.mapper.PaymentRecordMapper;
 import com.playapp.mapper.ServiceRecordMapper;
+import com.playapp.service.AdminAuditLogService;
 import com.playapp.service.CompanionProfileService;
 import com.playapp.service.CompanionWalletService;
 import com.playapp.service.OrderService;
@@ -44,6 +47,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     private final CompanionSkillMapper companionSkillMapper;
     private final OrderStatusLogMapper orderStatusLogMapper;
     private final ServiceRecordMapper serviceRecordMapper;
+    private final PaymentRecordMapper paymentRecordMapper;
+    private final AdminAuditLogService auditLogService;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private WxPayService wxPayService;
@@ -181,14 +186,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             String transactionId = notifyResult.getTransactionId();
 
             Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
-            if (order != null && order.getStatus() == Order.STATUS_PENDING_PAY) {
-                int fromStatus = order.getStatus();
-                order.setStatus(Order.STATUS_PAID);
-                order.setTransactionId(transactionId);
-                order.setPayTime(LocalDateTime.now());
-                this.updateById(order);
-                addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, "微信支付回调成功");
-                log.info("订单支付成功回调处理完成: {}", orderNo);
+            if (order != null) {
+                markPaid(order, transactionId, xmlData, "微信支付回调成功");
             }
 
             return WxPayNotifyResponse.success("OK");
@@ -200,14 +199,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     private void mockPaySuccess(String orderNo) {
         Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
-        if (order != null && order.getStatus() == Order.STATUS_PENDING_PAY) {
-            int fromStatus = order.getStatus();
-            order.setStatus(Order.STATUS_PAID);
-            order.setTransactionId("mock_trans_" + System.currentTimeMillis());
-            order.setPayTime(LocalDateTime.now());
-            this.updateById(order);
-            addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, "Mock 支付成功");
-            log.info("Mock: 订单直接更新为支付成功: {}", orderNo);
+        if (order != null) {
+            markPaid(order, "mock_trans_" + orderNo, null, "Mock 支付成功");
         }
     }
 
@@ -374,6 +367,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         this.updateById(order);
         ensureServiceRecord(order);
         addStatusLog(order, fromStatus, Order.STATUS_GROUP_CREATED, adminId, 3, defaultText(remark, "客服已完成三方群对接"));
+        auditLogService.record(adminId, "ORDER_GROUP_CREATED", "order", orderNo, remark);
         log.info("管理员 {} 标记订单已拉群: {}", adminId, orderNo);
     }
 
@@ -399,6 +393,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         serviceRecordMapper.updateById(record);
 
         addStatusLog(order, fromStatus, Order.STATUS_IN_SERVICE, adminId, 3, defaultText(remark, "服务已开始"));
+        auditLogService.record(adminId, "ORDER_START_SERVICE", "order", orderNo, remark);
         log.info("管理员 {} 标记订单服务开始: {}", adminId, orderNo);
     }
 
@@ -430,6 +425,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         serviceRecordMapper.updateById(record);
 
         addStatusLog(order, fromStatus, Order.STATUS_USER_CONFIRMED, adminId, 3, defaultText(finishRemark, "平台核销完工"));
+        auditLogService.record(adminId, "ORDER_FINISH", "order", orderNo, finishRemark);
         log.info("管理员 {} 核销订单完工: {}", adminId, orderNo);
     }
 
@@ -437,6 +433,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void adminSettleOrder(Long adminId, String orderNo, String remark) {
         Order order = getOrderByNo(orderNo);
+        if (order.getStatus() == Order.STATUS_SETTLED) {
+            return;
+        }
         if (order.getStatus() != Order.STATUS_USER_CONFIRMED) {
             throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已确认完工订单才能结算");
         }
@@ -444,9 +443,35 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_SETTLED);
         this.updateById(order);
-        companionWalletService.addBalance(order.getCompanionId(), order.getTotalAmount(), order.getOrderId(), order.getOrderNo());
+        companionWalletService.addBalance(order.getCompanionId(), order.getCompanionAmount(), order.getOrderId(), order.getOrderNo());
+        recordPayment(order, "SETTLE-" + order.getOrderNo(), null, 4, order.getCompanionAmount(), 1, remark);
         addStatusLog(order, fromStatus, Order.STATUS_SETTLED, adminId, 3, defaultText(remark, "平台结算放款"));
+        auditLogService.record(adminId, "ORDER_SETTLE", "order", orderNo, remark);
         log.info("管理员 {} 结算订单并放款: {}", adminId, orderNo);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void adminApproveRefund(Long adminId, String orderNo, String remark) {
+        Order order = getOrderByNo(orderNo);
+        if (order.getStatus() == Order.STATUS_FULL_REFUNDED || order.getStatus() == Order.STATUS_PARTIAL_REFUNDED) {
+            return;
+        }
+        if (order.getStatus() != Order.STATUS_CANCEL_REQUESTED && order.getStatus() != Order.STATUS_REFUNDING) {
+            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有退款申请中的订单才能退款");
+        }
+
+        int fromStatus = order.getStatus();
+        BigDecimal refundAmount = order.getRefundAmount() == null || order.getRefundAmount().compareTo(BigDecimal.ZERO) <= 0
+                ? order.getTotalAmount()
+                : order.getRefundAmount();
+        order.setStatus(Order.STATUS_FULL_REFUNDED);
+        order.setRefundAmount(refundAmount);
+        this.updateById(order);
+
+        recordPayment(order, "REFUND-" + order.getOrderNo(), order.getTransactionId(), 2, refundAmount, 1, remark);
+        addStatusLog(order, fromStatus, Order.STATUS_FULL_REFUNDED, adminId, 3, defaultText(remark, "平台确认全额退款"));
+        auditLogService.record(adminId, "ORDER_REFUND", "order", orderNo, remark);
     }
 
     private Order getOrderByNo(String orderNo) {
@@ -480,6 +505,45 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         log.setOperatorRole(operatorRole);
         log.setChangeReason(reason);
         orderStatusLogMapper.insert(log);
+    }
+
+    private void markPaid(Order order, String transactionId, String notifyData, String reason) {
+        if (transactionId != null && paymentRecordMapper.selectCount(
+                new LambdaQueryWrapper<PaymentRecord>().eq(PaymentRecord::getWxTransactionId, transactionId)) > 0) {
+            return;
+        }
+        if (order.getStatus() != Order.STATUS_PENDING_PAY && order.getStatus() != Order.STATUS_PAID) {
+            return;
+        }
+        if (order.getStatus() == Order.STATUS_PENDING_PAY) {
+            int fromStatus = order.getStatus();
+            order.setStatus(Order.STATUS_PAID);
+            order.setTransactionId(transactionId);
+            order.setPayTime(LocalDateTime.now());
+            this.updateById(order);
+            addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, reason);
+        }
+        recordPayment(order, "PAY-" + order.getOrderNo(), transactionId, 1, order.getTotalAmount(), 1, notifyData);
+        log.info("订单支付成功处理完成: {}", order.getOrderNo());
+    }
+
+    private void recordPayment(Order order, String paymentNo, String wxTransactionId, Integer paymentType,
+                               BigDecimal amount, Integer status, String notifyData) {
+        Long exists = paymentRecordMapper.selectCount(
+                new LambdaQueryWrapper<PaymentRecord>().eq(PaymentRecord::getPaymentNo, paymentNo));
+        if (exists != null && exists > 0) {
+            return;
+        }
+        PaymentRecord record = new PaymentRecord();
+        record.setOrderId(order.getOrderId());
+        record.setPaymentNo(paymentNo);
+        record.setWxTransactionId(wxTransactionId);
+        record.setPaymentType(paymentType);
+        record.setAmount(amount);
+        record.setStatus(status);
+        record.setPaidTime(LocalDateTime.now());
+        record.setNotifyData(notifyData);
+        paymentRecordMapper.insert(record);
     }
 
     private String defaultText(String text, String fallback) {

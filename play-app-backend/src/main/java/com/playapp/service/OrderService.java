@@ -83,4 +83,9 @@ public interface OrderService extends IService<Order> {
      * 管理员结算放款
      */
     void adminSettleOrder(Long adminId, String orderNo, String remark);
+
+    /**
+     * 管理员处理退款申请
+     */
+    void adminApproveRefund(Long adminId, String orderNo, String remark);
 }
