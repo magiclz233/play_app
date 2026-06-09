@@ -4,9 +4,9 @@
   "private": true,
   "scripts": {
     "dev:mp-weixin": "uni -p mp-weixin",
-    "build:mp-weixin": "uni build -p mp-weixin",
+    "build:mp-weixin": "node --no-warnings scripts/uni-build.cjs build -p mp-weixin",
     "dev:h5": "uni -p h5",
-    "build:h5": "uni build -p h5"
+    "build:h5": "node --no-warnings scripts/uni-build.cjs build -p h5"
   },
   "dependencies": {
     "@dcloudio/uni-app": "3.0.0-4020420240722002",
@@ -24,14 +24,28 @@
     "@dcloudio/uni-mp-xhs": "3.0.0-4020420240722002",
     "@dcloudio/uni-quickapp-webview": "3.0.0-4020420240722002",
     "pinia": "^2.1.7",
-    "vue": "^3.4.21"
+    "vue": "3.4.21",
+    "vue-router": "4.3.3"
+  },
+  "overrides": {
+    "vue": "3.4.21",
+    "@dcloudio/uni-h5": {
+      "vue-router": "4.3.3"
+    }
+  },
+  "pnpm": {
+    "overrides": {
+      "vue": "3.4.21",
+      "vue-router": "4.3.3"
+    }
   },
   "devDependencies": {
     "@dcloudio/types": "^3.4.8",
     "@dcloudio/uni-cli-shared": "3.0.0-4020420240722002",
     "@dcloudio/vite-plugin-uni": "3.0.0-4020420240722002",
     "@vue/tsconfig": "^0.5.1",
-    "sass-embedded": "^1.100.0",
+    "sass": "1.78.0",
+    "sass-embedded": "1.78.0",
     "typescript": "^5.2.2",
     "vite": "^5.2.8",
     "vue-tsc": "^2.0.7"
