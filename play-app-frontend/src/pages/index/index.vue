@@ -128,9 +128,7 @@
           </view>
         </view>
       </view>
-      <view class="empty-state" v-else-if="activeTab === 'recommend'">
-        <text>{{ t('lobby.emptyRecommend') }}</text>
-      </view>
+      <EmptyState v-else-if="activeTab === 'recommend'" :text="t('lobby.emptyRecommend')" hint="去周边看看更多搭子" />
 
       <!-- 需求大厅列表 -->
       <view class="request-list" v-if="activeTab === 'requests' && loadingRequests">
@@ -162,9 +160,7 @@
           </view>
         </view>
       </view>
-      <view class="empty-state" v-if="activeTab === 'requests' && !loadingRequests && requestList.length === 0">
-        <text>{{ t('lobby.emptyRequests') }}</text>
-      </view>
+      <EmptyState v-if="activeTab === 'requests' && !loadingRequests && requestList.length === 0" :text="t('lobby.emptyRequests')" hint="发布你的第一个需求吧" />
 
       <view class="loading-more" v-if="!loadingCompanions">
         <text>{{ t('common.noMore') }}</text>
@@ -202,6 +198,7 @@
 import {ref, onMounted, onUnmounted, computed} from 'vue';
 import {request} from '../../utils/request';
 import {t} from '../../utils/i18n';
+import EmptyState from '../../components/EmptyState.vue';
 
 const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 20);
 const currentCity = ref('杭州市');
@@ -1107,14 +1104,7 @@ const goToCompanion = () => {
 }
 
 .empty-state {
-  margin: 20rpx 30rpx 40rpx;
-  padding: 54rpx 24rpx;
-  text-align: center;
-  color: var(--text-secondary);
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  font-size: var(--font-size-sm);
+  /* 旧样式已迁移至 EmptyState 组件 */
 }
 
 /* 卡片触摸反馈 */

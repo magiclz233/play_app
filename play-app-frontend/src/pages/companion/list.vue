@@ -34,7 +34,12 @@
 
     <!-- 列表区 -->
     <scroll-view scroll-y class="list-content" @scrolltolower="loadMore" :refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onRefresh">
-      <view class="companion-list">
+      <!-- 骨架加载状态 -->
+      <view class="skeleton-grid" v-if="loading && companionList.length === 0">
+        <SkeletonCard variant="companion" v-for="i in 4" :key="i" />
+      </view>
+
+      <view class="companion-list" v-else>
         <view class="companion-card" v-for="item in companionList" :key="item.userId" @click="goToDetail(item.userId)" hover-class="card-hover">
           <view class="card-cover-wrap">
             <image :src="item.coverUrl || fallbackCover" mode="aspectFill" class="card-cover" lazy-load></image>
@@ -77,6 +82,7 @@ import {onLoad} from '@dcloudio/uni-app';
 import {ref} from 'vue';
 import {request} from '../../utils/request';
 import {useAppStore} from '../../store/app';
+import SkeletonCard from '../../components/SkeletonCard.vue';
 
 const appStore = useAppStore();
 const companionList = ref<any[]>([]);
@@ -267,6 +273,13 @@ const goToDetail = (id: number) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
   padding: 20rpx;
+
+  .skeleton-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 24rpx;
+    padding: 0 10rpx;
+  }
 
   .card-hover { opacity: 0.85; transform: scale(0.98); }
 

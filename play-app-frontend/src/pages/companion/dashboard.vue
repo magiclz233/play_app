@@ -76,9 +76,7 @@
           </view>
         </view>
         
-        <view class="empty-state" v-if="orderList.length === 0 && !loading">
-          <text>暂无订单</text>
-        </view>
+        <EmptyState v-if="orderList.length === 0 && !loading" text="暂无订单" hint="完成服务后订单将在此展示" />
       </scroll-view>
     </view>
   </view>
@@ -88,6 +86,7 @@
 import {onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
 import {useAppStore} from '../../store/app';
+import EmptyState from '../../components/EmptyState.vue';
 
 const appStore = useAppStore();
 const stats = ref<any>({});

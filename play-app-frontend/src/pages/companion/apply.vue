@@ -115,6 +115,7 @@
 import {computed, onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
 import {useAppStore} from '../../store/app';
+import {haptic} from '../../utils/haptic';
 
 // API Configuration
 const appStore = useAppStore();
@@ -352,6 +353,7 @@ const submitApply = async () => {
     });
     if (res.code === 200) {
       uni.showToast({ title: '提交成功', icon: 'success' });
+      haptic.heavy();
       applyStatus.value = 0; // 变为审核中
     }
   } finally {

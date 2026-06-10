@@ -57,6 +57,7 @@
 import {onMounted, ref} from 'vue';
 import {request} from '../../utils/request';
 import {useAppStore} from '../../store/app';
+import {haptic} from '../../utils/haptic';
 
 const appStore = useAppStore();
 const wallet = ref<any>({});
@@ -100,6 +101,7 @@ const submitWithdraw = async () => {
 
   if (res.code === 200) {
     uni.showToast({ title: '申请成功', icon: 'success' });
+    haptic.heavy();
     showWithdraw.value = false;
     withdrawAmount.value = '';
     fetchWallet();

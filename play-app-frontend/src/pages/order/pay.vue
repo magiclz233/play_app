@@ -32,6 +32,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
 import { useAppStore } from '../../store/app';
+import { haptic } from '../../utils/haptic';
 import { t } from '../../utils/i18n';
 
 const appStore = useAppStore();
@@ -84,6 +85,7 @@ const doPay = async () => {
         setTimeout(() => {
           uni.hideLoading();
           uni.showToast({ title: t('common.success'), icon: 'success' });
+          haptic.heavy();
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/order/list' });
           }, 1500);
@@ -100,6 +102,7 @@ const doPay = async () => {
         paySign: payInfo.paySign,
         success: () => {
           uni.showToast({ title: t('common.success'), icon: 'success' });
+          haptic.heavy();
           setTimeout(() => {
             uni.reLaunch({ url: '/pages/order/list' });
           }, 1500);

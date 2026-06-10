@@ -50,9 +50,7 @@
         </view>
       </view>
 
-      <view class="empty-state" v-else-if="!loading">
-        <text>{{ t('lobby.emptyRequests') }}</text>
-      </view>
+      <EmptyState v-else-if="!loading" :text="t('lobby.emptyRequests')" actionText="去大厅逛逛" @action="goToLobby" />
 
       <view class="loading-state" v-if="loading && orderList.length > 0">
         <text>{{ t('common.loading') }}</text>
@@ -70,6 +68,7 @@ import { onLoad, onShow } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
 import { useAppStore } from '../../store/app';
 import { t } from '../../utils/i18n';
+import EmptyState from '../../components/EmptyState.vue';
 
 const appStore = useAppStore();
 const orderList = ref<any[]>([]);
@@ -177,6 +176,7 @@ const goToRefund = (orderNo: string) => {
   uni.navigateTo({ url: `/pages/order/refund?orderNo=${orderNo}` });
 };
 
+const goToLobby = () => { uni.switchTab({ url: '/pages/index/index' }); };
 const canRefund = (status: number) => [20, 30, 40, 50, 60].includes(status);
 const hasActions = (status: number) => status === 10 || status === 60 || status === 70 || status === 80 || canRefund(status);
 </script>
