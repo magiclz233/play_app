@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass">
+  <view class="container">
     <view class="tabs">
       <view class="tab" :class="{ active: activeTab === 0 }" @click="activeTab = 0">相册</view>
       <view class="tab" :class="{ active: activeTab === 1 }" @click="activeTab = 1">技能</view>
@@ -277,7 +277,7 @@ const previewImage = (url: string) => {
 .skill-price { color: $color-primary; font-weight: bold; font-family: 'Outfit', sans-serif; margin-left: 16rpx; }
 .skill-desc { font-size: 22rpx; color: $text-color-secondary; display: block; margin-top: 8rpx; }
 .skill-actions .edit { color: $color-primary; margin-right: 20rpx; }
-.skill-actions .delete { color: #EF4444; }
+.skill-actions .delete { color: var(--color-error); }
 .add-skill-btn { margin-top: 20rpx; background: $gradient-primary; color: #fff; border-radius: $border-radius-pill; border: none; }
 
 .tag-grid { display: flex; flex-wrap: wrap; gap: 16rpx; }
@@ -285,7 +285,7 @@ const previewImage = (url: string) => {
 .tag-item.selected { background: rgba(255,59,92,0.1); color: $color-primary; border-color: $color-primary; }
 .save-tags-btn { margin-top: 40rpx; background: $gradient-primary; color: #fff; border-radius: $border-radius-pill; border: none; }
 
-.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 999; display: flex; align-items: center; justify-content: center; }
+.modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: $z-index-modal; display: flex; align-items: center; justify-content: center; }
 .modal { width: 80%; background: $bg-color-white; border-radius: $border-radius-lg; padding: 40rpx; }
 .modal-title { text-align: center; font-weight: bold; font-size: 32rpx; display: block; margin-bottom: 30rpx; }
 .form-item { margin-bottom: 24rpx; }

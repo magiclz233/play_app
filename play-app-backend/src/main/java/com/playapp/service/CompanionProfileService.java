@@ -24,7 +24,7 @@ public interface CompanionProfileService extends IService<CompanionProfile> {
     /**
      * 分页查询公开助教列表
      */
-    com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.playapp.vo.CompanionVO> getCompanionPage(Integer current, Integer size, Integer categoryId);
+    com.baomidou.mybatisplus.extension.plugins.pagination.Page<com.playapp.vo.CompanionVO> getCompanionPage(Integer current, Integer size, Integer categoryId, String keyword, Integer gender, String sortBy);
 
     /**
      * 获取助教公开详细信息

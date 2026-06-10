@@ -8,6 +8,7 @@ import com.playapp.entity.Order;
 import com.playapp.service.OrderService;
 import com.playapp.service.ReviewService;
 import com.playapp.dto.ReviewDTO;
+import com.playapp.vo.OrderCreateVO;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -27,9 +28,9 @@ public class OrderController {
      * 创建预约订单
      */
     @PostMapping
-    public Result<String> createOrder(@AuthenticationPrincipal Long userId, @Valid @RequestBody OrderCreateDTO dto) {
-        String orderNo = orderService.createOrder(userId, dto);
-        return Result.success("订单创建成功", orderNo);
+    public Result<OrderCreateVO> createOrder(@AuthenticationPrincipal Long userId, @Valid @RequestBody OrderCreateDTO dto) {
+        OrderCreateVO vo = orderService.createOrder(userId, dto);
+        return Result.success("订单创建成功", vo);
     }
 
     /**

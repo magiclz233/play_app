@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" v-if="order">
+  <view class="container" v-if="order">
     <view class="order-card">
       <view class="header-row">
         <text class="order-no">No. {{ order.orderNo }}</text>

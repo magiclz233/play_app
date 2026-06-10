@@ -529,6 +529,51 @@ COMMENT ON COLUMN withdrawal_records.auditor_id IS '审核人(管理员ID)';
 
 
 -- ================================================================
+-- 六、系统配置模块
+-- ================================================================
+
+-- 22. 系统配置表
+CREATE TABLE IF NOT EXISTS system_configs (
+    id BIGSERIAL PRIMARY KEY,
+    config_key VARCHAR(64) NOT NULL UNIQUE,
+    config_name VARCHAR(100) NOT NULL,
+    config_value JSONB DEFAULT NULL,
+    remark VARCHAR(255) DEFAULT NULL,
+    status SMALLINT NOT NULL DEFAULT 1,
+    create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_system_configs_key ON system_configs(config_key);
+
+COMMENT ON TABLE system_configs IS '系统配置表 — 存储平台级动态配置';
+COMMENT ON COLUMN system_configs.config_key IS '配置键（唯一标识）: theme_brand, theme_layout, feature_flags';
+COMMENT ON COLUMN system_configs.config_name IS '配置名称（便于管理）';
+COMMENT ON COLUMN system_configs.config_value IS '配置值（JSONB），存储任意结构的配置内容';
+COMMENT ON COLUMN system_configs.remark IS '配置说明';
+COMMENT ON COLUMN system_configs.status IS '状态: 1-启用, 0-禁用';
+
+-- 插入默认品牌主题配置
+INSERT INTO system_configs (config_key, config_name, config_value, remark, status) VALUES
+('theme_brand', '品牌主题配置', '{
+  "brand": {
+    "primaryColor": "#FF3B5C",
+    "accentColor": "#FF9F1C",
+    "gradientEndColor": "#FF7B54"
+  },
+  "radius": {
+    "scale": "smooth"
+  },
+  "spacing": {
+    "scale": "comfortable"
+  },
+  "typography": {
+    "scale": 1
+  }
+}'::jsonb, '平台品牌色、圆角、间距、字体缩放等视觉配置。前端通过 GET /api/public/theme-config 获取。', 1)
+ON CONFLICT (config_key) DO NOTHING;
+
+-- ================================================================
 -- 七、基础数据初始化
 -- ================================================================
 

@@ -36,11 +36,20 @@ mybatis-plus:
     db-config:
       id-type: auto
 
+# 平台业务配置
+app:
+  platform:
+    fee-rate: 0.05        # 平台抽成比例 5%
+    fee-min: 5.00         # 最低平台费
+    fee-max: 50.00        # 最高平台费封顶
+  order:
+    pay-timeout-minutes: 15  # 订单支付超时时间（分钟）
+
 # 微信集成配置 (基于 WxJava)
 wx:
   miniapp:
-    appid: wx_placeholder_appid
-    secret: wx_placeholder_secret
+    appid: wx39ba2ce2e8ff43a0
+    secret: 57c20fcd1a6ff90ce8626bdfc6d39c7a
     configs:
       - appid: ${wx.miniapp.appid}
         secret: ${wx.miniapp.secret}

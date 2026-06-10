@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass">
+  <view class="container">
     <view class="card rating-card">
       <view class="title">{{ appStore.locale === 'en' ? 'Rate This Service' : '为本次服务打分' }}</view>
       <view class="stars">

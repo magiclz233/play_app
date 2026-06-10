@@ -1,5 +1,5 @@
 <template>
-  <view :class="['container', appStore.themeClass]" :style="appStore.themeStyle">
+  <view class="container">
     <!-- 顶部导航与筛选区 -->
     <view class="header-wrap">
       <!-- 搜索框 -->
@@ -35,9 +35,9 @@
     <!-- 列表区 -->
     <scroll-view scroll-y class="list-content" @scrolltolower="loadMore" :refresher-enabled="true" :refresher-triggered="isRefreshing" @refresherrefresh="onRefresh">
       <view class="companion-list">
-        <view class="companion-card" v-for="item in companionList" :key="item.userId" @click="goToDetail(item.userId)">
+        <view class="companion-card" v-for="item in companionList" :key="item.userId" @click="goToDetail(item.userId)" hover-class="card-hover">
           <view class="card-cover-wrap">
-            <image :src="item.coverUrl || fallbackCover" mode="aspectFill" class="card-cover"></image>
+            <image :src="item.coverUrl || fallbackCover" mode="aspectFill" class="card-cover" lazy-load></image>
             <view class="status-badge" :class="{ 'busy': item.workStatus === 2 }">
               <text class="dot"></text>
               <text>{{ item.workStatus === 1 ? '可接单' : (item.workStatus === 2 ? '忙碌中' : '休息中') }}</text>
@@ -92,6 +92,7 @@ const fallbackCover = 'https://picsum.photos/seed/companion-list-cover/600/800';
 
 onLoad((options: any) => {
   categoryId.value = options?.categoryId || null;
+  keyword.value = options?.keyword || '';
   fetchList(true);
 });
 
@@ -99,6 +100,9 @@ const setSort = (sort: string) => {
   currentSort.value = sort;
   fetchList(true);
 };
+
+const keyword = ref('');
+const selectedGender = ref(0);
 
 const fetchList = async (reset = false) => {
   if (reset) {
@@ -109,8 +113,16 @@ const fetchList = async (reset = false) => {
 
   loading.value = true;
   try {
+    const params = new URLSearchParams();
+    params.append('current', String(current.value));
+    params.append('size', String(size.value));
+    if (categoryId.value) params.append('categoryId', categoryId.value);
+    if (keyword.value) params.append('keyword', keyword.value);
+    if (selectedGender.value > 0) params.append('gender', String(selectedGender.value));
+    if (currentSort.value !== 'recommend') params.append('sortBy', currentSort.value);
+
     const res = await request({
-      url: `/companions?current=${current.value}&size=${size.value}${categoryId.value ? '&categoryId=' + categoryId.value : ''}`,
+      url: `/companions?${params.toString()}`,
       method: 'GET'
     });
     
@@ -255,6 +267,8 @@ const goToDetail = (id: number) => {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 20rpx;
   padding: 20rpx;
+
+  .card-hover { opacity: 0.85; transform: scale(0.98); }
 
   .companion-card {
     background-color: var(--bg-card);

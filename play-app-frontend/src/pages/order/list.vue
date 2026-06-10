@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass">
+  <view class="container">
     <view class="tabs">
       <view class="tab" :class="{ active: currentTab === '' }" @click="switchTab('')" hover-class="tab-hover">
         {{ t('mine.allOrders') }}

@@ -1,62 +1,121 @@
-import {ref, computed} from 'vue';
-import {defineStore} from 'pinia';
-import {themeTokens, type ThemeMode, type ThemeName} from '../theme/tokens';
+import { ref, computed } from 'vue';
+import { defineStore } from 'pinia';
+import { themeEngine } from '../theme/engine';
+import type { ThemeMode, ThemeName, ThemeConfig } from '../theme/theme.config';
+
+/**
+ * 应用全局状态管理
+ *
+ * 职责：
+ * - 主题模式（auto/light/dark）状态管理
+ * - 多语言偏好（zh-Hans/zh-Hant/en）
+ * - 初始化时委托 themeEngine 注入 CSS 变量 + 监听系统主题变化
+ *
+ * 相比旧版的改进：
+ * - 不再手动维护 CSS 变量表（由 themeEngine 统一计算）
+ * - 不再需要页面绑定 :style="appStore.themeStyle"（由引擎自动注入）
+ * - 品牌色可从远程 API 加载并合并
+ */
 
 export const useAppStore = defineStore('app', () => {
-    // 主题设置模式: 'auto' (跟随系统) | 'light' (锁定浅色) | 'dark' (锁定深色)
-    const themeMode = ref<ThemeMode>(uni.getStorageSync('themeMode') || 'light');
-    // 当前正在生效的实际明暗色: 'light' | 'dark'
-    const currentTheme = ref<ThemeName>('light');
+    // ============================================================
+    // 主题状态
+    // ============================================================
 
-    // 语言偏好: 'zh-Hans' (简中) | 'zh-Hant' (繁中) | 'en' (英文)
-    const locale = ref<'zh-Hans' | 'zh-Hant' | 'en'>(uni.getStorageSync('locale') || 'zh-Hans');
+    /** 主题设置模式: 'auto' (跟随系统) | 'light' | 'dark' */
+    const themeMode = ref<ThemeMode>(
+        (uni.getStorageSync('themeMode') as ThemeMode) || 'light'
+    );
 
-    // 格式化后的类名，方便页面直接绑定: 'theme-light' | 'theme-dark'
-    const themeClass = computed(() => `theme-${currentTheme.value}`);
-    const themeStyle = computed(() => themeTokens[currentTheme.value].cssVars);
+    /** 当前正在生效的实际明暗色 */
+    const currentTheme = ref<ThemeName>(themeEngine.getCurrentTheme());
 
+    /** 是否为暗色模式（便捷计算属性） */
+    const isDark = computed(() => currentTheme.value === 'dark');
+
+    // ============================================================
+    // 语言状态
+    // ============================================================
+
+    const locale = ref<'zh-Hans' | 'zh-Hant' | 'en'>(
+        uni.getStorageSync('locale') || 'zh-Hans'
+    );
+
+    // ============================================================
+    // 主题操作
+    // ============================================================
+
+    /** 更新原生 UI 组件颜色（NavigationBar、TabBar） */
     const applyThemeToNativeUi = () => {
-        const tokens = themeTokens[currentTheme.value];
-        uni.setNavigationBarColor({
-            ...tokens.navigationBar,
-            animation: { duration: 200, timingFunc: 'easeIn' }
-        });
-        uni.setTabBarStyle(tokens.tabBar);
-    };
+        // themeEngine.apply() 内部已包含 applyNativeUi 调用
+        // 此方法保留用于 onShow 时的刷新
+        const vars = themeEngine.getCssVars();
+        const isDarkMode = themeEngine.isDark();
 
-    // 更新实际明暗色主题
-    const updateActualTheme = (systemTheme?: ThemeName) => {
-        if (themeMode.value === 'auto') {
-            // 跟随系统
-            const sysTheme = systemTheme || uni.getSystemInfoSync().theme || 'dark';
-            currentTheme.value = sysTheme === 'light' ? 'light' : 'dark';
-        } else {
-            // 手动锁定
-            currentTheme.value = themeMode.value;
+        try {
+            uni.setNavigationBarColor({
+                frontColor: isDarkMode ? '#ffffff' : '#000000',
+                backgroundColor: vars['--bg-main'] || (isDarkMode ? '#121216' : '#FAF5F5'),
+                animation: { duration: 200, timingFunc: 'easeIn' },
+            });
+            uni.setTabBarStyle({
+                color: vars['--text-muted'] || (isDarkMode ? '#737887' : '#A1A5B1'),
+                selectedColor: vars['--color-primary'] || '#FF3B5C',
+                backgroundColor: vars['--bg-card'] || (isDarkMode ? '#24262D' : '#FFFFFF'),
+                borderStyle: isDarkMode ? 'white' : 'black',
+            });
+        } catch (e) {
+            // 某些页面可能没有 TabBar，忽略错误
         }
-        applyThemeToNativeUi();
     };
 
-    // 切换主题模式
+    /** 切换主题模式 */
     const setThemeMode = (mode: ThemeMode) => {
         themeMode.value = mode;
         uni.setStorageSync('themeMode', mode);
-        updateActualTheme();
+
+        if (mode === 'auto') {
+            // 跟随系统
+            try {
+                const sysInfo = uni.getSystemInfoSync();
+                const sysTheme: ThemeName = sysInfo.theme === 'dark' ? 'dark' : 'light';
+                themeEngine.setTheme(sysTheme);
+                currentTheme.value = sysTheme;
+            } catch {
+                themeEngine.setTheme('light');
+                currentTheme.value = 'light';
+            }
+        } else {
+            themeEngine.setTheme(mode);
+            currentTheme.value = mode;
+        }
     };
 
+    /** 切换明暗主题 */
     const toggleTheme = () => {
-        setThemeMode(currentTheme.value === 'light' ? 'dark' : 'light');
+        const next = currentTheme.value === 'light' ? 'dark' : 'light';
+        setThemeMode(next);
     };
 
-    // 切换多语言
+    /** 更新品牌配置（从远程 API 加载后调用） */
+    const updateBrandConfig = (config: Partial<ThemeConfig>) => {
+        themeEngine.setConfig(config);
+    };
+
+    // ============================================================
+    // 语言操作
+    // ============================================================
+
     const setLocale = (lang: 'zh-Hans' | 'zh-Hant' | 'en') => {
         locale.value = lang;
         uni.setStorageSync('locale', lang);
-        // 通知多语言框架更新翻译字典
         uni.$emit('locale-changed', lang);
     };
 
-    // 初始化应用配置
+    // ============================================================
+    // 初始化
+    // ============================================================
+
     const initApp = () => {
         // 1. 初始化多语言
         let savedLocale = uni.getStorageSync('locale');
@@ -72,28 +131,66 @@ export const useAppStore = defineStore('app', () => {
             uni.setStorageSync('locale', locale.value);
         }
 
-        // 2. 初始化明暗主题
-        updateActualTheme();
+        // 2. 初始化主题引擎
+        const savedMode = uni.getStorageSync('themeMode') as ThemeMode | '';
+        themeMode.value = savedMode || 'light';
 
-        // 3. 监听系统主题变化
-        uni.onThemeChange((res) => {
-            if (themeMode.value === 'auto') {
-                updateActualTheme(res.theme as 'light' | 'dark');
-            }
+        // 初始化引擎（如果尚未初始化）
+        themeEngine.init(themeMode.value);
+
+        // 同步当前主题状态
+        currentTheme.value = themeEngine.getCurrentTheme();
+
+        // 3. 监听引擎主题变更
+        themeEngine.onChange((newTheme) => {
+            currentTheme.value = newTheme;
         });
+
+        // 4. 尝试加载远程品牌配置
+        loadRemoteThemeConfig();
+    };
+
+    /**
+     * 从后端加载品牌主题配置
+     */
+    const loadRemoteThemeConfig = async () => {
+        try {
+            // 动态导入 request 避免循环依赖
+            const { request } = await import('../utils/request');
+            const res = await request({
+                url: '/public/theme-config',
+                method: 'GET',
+            });
+            if (res.code === 200 && res.data) {
+                const { mapRemoteConfig } = await import('../theme/theme.config');
+                const partialConfig = mapRemoteConfig(res.data);
+                if (Object.keys(partialConfig).length > 0) {
+                    themeEngine.setConfig(partialConfig);
+                }
+            }
+        } catch {
+            // 网络失败或接口不存在时使用默认配置，静默处理
+            console.debug('[AppStore] Failed to load remote theme config, using defaults');
+        }
     };
 
     return {
+        // 状态
         themeMode,
         currentTheme,
-        themeClass,
-        themeStyle,
+        isDark,
         locale,
+
+        // 主题操作
         setThemeMode,
         toggleTheme,
-        setLocale,
-        updateActualTheme,
+        updateBrandConfig,
         applyThemeToNativeUi,
-        initApp
+
+        // 语言
+        setLocale,
+
+        // 生命周期
+        initApp,
     };
 });

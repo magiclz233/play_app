@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
+  <view class="container">
     <view class="wallet-card">
       <view class="label">可提现余额 (元)</view>
       <view class="balance">{{ wallet.balance || '0.00' }}</view>
@@ -36,7 +36,7 @@
             <text class="label">提现金额</text>
             <view class="input-wrap">
               <text>¥</text>
-              <input type="digit" v-model="withdrawAmount" placeholder="单次最低10元" />
+              <input type="digit" v-model="withdrawAmount" placeholder="单次最低10元" inputmode="decimal" />
             </view>
           </view>
           <view class="form-item">

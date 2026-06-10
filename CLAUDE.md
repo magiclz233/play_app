@@ -207,6 +207,136 @@ public LoginVO mockLogin(String phone) {
 
 ---
 
+## 🎨 前端 UI/UX 设计系统（强制遵守）
+
+> **规则优先级**：本章规则为强制性约束。任何前端代码变更必须通过以下检查清单。
+> 完整设计规范文档：`docs/THEME_OPTIMIZATION_PLAN.md` | `design.md`
+
+### 主题架构（三层设计令牌）
+
+```
+play-app-frontend/src/theme/
+├── index.ts              # 统一导出入口
+├── primitives.ts         # Layer 1: 原始色板（10级色阶 × 8个色相）
+├── semantic.ts           # Layer 2: 语义令牌（亮/暗两套完整映射）
+├── components.ts         # Layer 3: 组件令牌（按钮/卡片/输入框等）
+├── theme.config.ts       # 品牌配置（可被后端 API 覆盖）
+├── engine.ts             # 主题引擎（计算 + 合并 + 注入 CSS 变量）
+├── color-utils.ts        # 颜色工具（hexToRgb, blend, contrastRatio 等）
+└── tokens.ts             # [废弃] 向后兼容层
+```
+
+### 核心原则
+
+1. **所有颜色必须通过 CSS 变量引用**，严禁硬编码 hex 值。
+2. **亮/暗模式自动适配**——ThemeEngine 在 `App.vue onLaunch` 中注入 CSS 变量。
+3. **页面无需手动绑定主题**——`<view class="container">` 即可，CSS 变量自动继承。
+4. **品牌色可通过后端 API 实时更新**，无需重新编译。
+
+### 强制检查清单（每次前端变更前必查）
+
+#### 🚫 禁止项（违反必须拒绝）
+- ❌ **硬编码颜色**：`color: #FF3B5C` / `background: #fff` / `border-color: #eee` → 必须用 `var(--xxx)`
+- ❌ **emoji 作为图标**：♂♀★☆🎨🚀⚙️ → 必须用内联 SVG（viewBox 0 0 24 24）
+- ❌ **裸 z-index 值**：`z-index: 99` / `z-index: 999` → 必须用 SCSS 变量（`$z-index-sticky`, `$z-index-modal` 等）
+- ❌ **动画 width/height**：`@keyframes { height: 10rpx }` → 必须用 `transform: scaleY()`
+- ❌ **outline: none 无替代**：移除聚焦环必须提供替代方案
+
+#### ✅ 必须项（缺少必须补全）
+- ✅ 所有 `<image>` 添加 `lazy-load`（首屏 banner 除外）
+- ✅ 所有可点击元素添加 `hover-class` 或 `:active` 反馈
+- ✅ 图标按钮添加 `aria-label` 属性
+- ✅ 数字输入框添加 `inputmode="numeric"` / `"decimal"`
+- ✅ `line-height` 显式设为 1.5-1.6（正文）
+- ✅ 触摸目标最小 88rpx（44px）
+
+### CSS 变量速查表
+
+| 用途 | 变量 | 说明 |
+|------|------|------|
+| 页面背景 | `var(--bg-main)` | 浅色: #FAF5F5, 暗色: #121216 |
+| 卡片背景 | `var(--bg-card)` | 浅色: #FFFFFF, 暗色: #24262D |
+| 浮层背景 | `var(--bg-elevated)` | 弹窗/下拉菜单 |
+| 微妙背景 | `var(--bg-subtle)` | 标签底色、区分区块 |
+| 主要文字 | `var(--text-primary)` | 浅色: #1A1A1F, 暗色: #E2E4E9 |
+| 次要文字 | `var(--text-secondary)` | 浅色: #5E6066, 暗色: #A1A5B1 |
+| 占位文字 | `var(--text-muted)` | 浅色: #A1A5B1, 暗色: #737887 |
+| 反白文字 | `var(--text-inverse)` | 深色背景上的白色文字 |
+| 品牌主色 | `var(--color-primary)` | 浅色: #FF3B5C, 暗色: #FF5C73 |
+| 主色RGB | `var(--color-primary-rgb)` | 用于 rgba() 组合：`rgba(var(--color-primary-rgb), 0.1)` |
+| 主色浅底 | `var(--color-primary-light)` | 标签/按钮背景 |
+| 主色深 | `var(--color-primary-dark)` | active/pressed 状态 |
+| 渐变终点 | `var(--color-gradient-end)` | 渐变按钮右侧色 |
+| 强调色 | `var(--color-accent)` | 皇冠、评分星、高亮 |
+| 成功色 | `var(--color-success)` | 在线状态、支付按钮、已通过 |
+| 警告色 | `var(--color-warning)` | 待审核、提醒 |
+| 错误色 | `var(--color-error)` | 驳回、删除、退款 |
+| 信息色 | `var(--color-info)` | 链接、提示 |
+| 常规边框 | `var(--border-color)` | 卡片/列表项边框 |
+| 强边框 | `var(--border-strong)` | 输入框聚焦 |
+| 卡片阴影 | `var(--shadow-card)` | 卡片悬浮 |
+| 浮动阴影 | `var(--shadow-floating)` | FAB、弹窗 |
+| 辉光阴影 | `var(--shadow-glow)` | 品牌辉光 |
+| 小/中/大圆角 | `var(--radius-sm)` / `md` / `lg` / `xl` | 8/16/24/32 rpx |
+| 全圆角 | `var(--radius-full)` | 999rpx |
+| 字号梯度 | `var(--font-size-xs)` ~ `xxl` | 20/24/28/32/36/48 rpx |
+| 间距梯度 | `var(--space-xs)` ~ `xl` | 8/16/24/32/48 rpx |
+
+### z-index 层级体系
+
+| SCSS 变量 | 值 | 用途 |
+|-----------|------|------|
+| `$z-index-dropdown` | 10 | 下拉菜单 |
+| `$z-index-sticky` | 100 | 悬浮按钮、固定底栏、吸顶导航 |
+| `$z-index-fixed` | 200 | 固定定位元素 |
+| `$z-index-modal-backdrop` | 500 | 弹窗遮罩 |
+| `$z-index-modal` | 1000 | 弹窗/对话框 |
+| `$z-index-toast` | 2000 | Toast 提示 |
+
+### 新页面/组件开发模板
+
+```vue
+<template>
+  <view class="container">
+    <!-- ✅ 正确：class="container" 即可，无需手动绑定主题 -->
+    <view class="my-card" hover-class="card-hover" @click="handleClick">
+      <image :src="url" mode="aspectFill" lazy-load />
+      <text class="title">标题</text>
+    </view>
+    <button :loading="submitting" hover-class="button-hover">提交</button>
+  </view>
+</template>
+
+<style lang="scss" scoped>
+.container {
+  min-height: 100vh;
+  background-color: var(--bg-main);     /* ✅ CSS 变量 */
+  padding: var(--space-md);
+}
+.my-card {
+  background-color: var(--bg-card);      /* ✅ CSS 变量 */
+  border: 1px solid var(--border-color); /* ✅ CSS 变量 */
+  border-radius: var(--radius-lg);       /* ✅ 设计令牌 */
+  box-shadow: var(--shadow-card);        /* ✅ 设计令牌 */
+}
+.title {
+  font-size: var(--font-size-base);      /* ✅ 字号令牌 */
+  color: var(--text-primary);            /* ✅ 文字令牌 */
+  line-height: 1.6;                      /* ✅ 显式行高 */
+}
+.card-hover { opacity: 0.85; transform: scale(0.98); }  /* ✅ 触摸反馈 */
+</style>
+```
+
+### 品牌色动态配置
+
+- **前端拉取**：`GET /api/public/theme-config`（公开接口，无需认证）
+- **管理员更新**：`PUT /api/admin/theme-config`（需 `ROLE_ADMIN`）
+- **数据库存储**：`system_configs` 表，`config_key='theme_brand'`，JSONB 格式
+- **生效机制**：ThemeEngine 合并远程配置 → 重新计算 CSS 变量 → 注入页面根元素
+
+---
+
 ## ⚙️ 编译与运行命令
 
 ### 后端命令（在 `play-app-backend` 目录下执行）

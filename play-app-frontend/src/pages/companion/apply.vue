@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
+  <view class="container">
     <view class="status-box" v-if="applyStatus !== -1">
       <view class="status-card" :class="statusClass">
         <text class="iconfont" :class="statusIcon"></text>
@@ -40,11 +40,11 @@
         </view>
         <view class="form-item">
           <text class="label">年龄</text>
-          <input type="number" v-model="formData.age" placeholder="请输入年龄" />
+          <input type="number" v-model="formData.age" placeholder="请输入年龄" inputmode="numeric" />
         </view>
         <view class="form-item">
           <text class="label">身高 (cm)</text>
-          <input type="number" v-model="formData.height" placeholder="请输入身高" />
+          <input type="number" v-model="formData.height" placeholder="请输入身高" inputmode="numeric" />
         </view>
       </view>
 
@@ -53,7 +53,7 @@
         <view class="form-item">
           <text class="label">收费标准</text>
           <view class="price-input">
-            <input type="digit" v-model="formData.pricePerHour" placeholder="0" />
+            <input type="digit" v-model="formData.pricePerHour" placeholder="0" inputmode="decimal" />
             <text class="unit">元/小时</text>
           </view>
         </view>
@@ -405,19 +405,19 @@ onMounted(() => {
     &.status-pending {
       background-color: rgba(245, 158, 11, 0.1);
       .iconfont, .title { color: $color-warning; }
-      .desc { color: #925e07; }
+      .desc { color: var(--color-warning); }
     }
     
     &.status-success {
       background-color: rgba(16, 185, 129, 0.1);
       .iconfont, .title { color: $color-success; }
-      .desc { color: #065f46; }
+      .desc { color: var(--color-success); }
     }
     
     &.status-reject {
       background-color: rgba(239, 68, 68, 0.1);
       .iconfont, .title { color: $color-error; }
-      .desc { color: #7f1d1d; }
+      .desc { color: var(--color-error); }
     }
   }
 }
@@ -588,7 +588,7 @@ onMounted(() => {
   .voice-preview {
     flex: 1;
     margin-left: 30rpx;
-    background-color: #F8F5FF;
+    background-color: var(--bg-subtle);
     border-radius: $border-radius-pill;
     height: 80rpx;
     display: flex;
@@ -613,9 +613,11 @@ onMounted(() => {
       height: 40rpx;
       
       .wave {
-        width: 4rpx; height: 10rpx;
+        width: 4rpx; height: 30rpx;
         background-color: $color-primary;
         margin-right: 8rpx;
+        transform-origin: bottom;
+        border-radius: 2rpx;
         border-radius: 2rpx;
         transition: height 0.2s;
         
@@ -672,9 +674,9 @@ onMounted(() => {
 }
 
 @keyframes wave {
-  0% { height: 10rpx; }
-  50% { height: 30rpx; }
-  100% { height: 10rpx; }
+  0% { transform: scaleY(0.35); }
+  50% { transform: scaleY(1); }
+  100% { transform: scaleY(0.35); }
 }
 .code-display {
   font-size: 48rpx;

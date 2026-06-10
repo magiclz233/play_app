@@ -14,7 +14,10 @@ public class ReviewDTO {
     private Integer rating;
 
     private String content;
-    
+
+    /** 是否匿名评价 */
+    private Boolean isAnonymous;
+
     // Optional images, separated by comma or array
     private String images;
 }

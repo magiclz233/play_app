@@ -1,10 +1,10 @@
 <template>
-  <view :class="['container', appStore.themeClass]" :style="appStore.themeStyle">
+  <view class="container">
     <view class="header-bg"></view>
 
     <!-- ===== 用户信息卡片 ===== -->
     <view class="user-card" v-if="userInfo">
-      <image :src="userInfo.avatarUrl || defaultAvatar" mode="aspectFill" class="avatar"></image>
+      <image :src="userInfo.avatarUrl || defaultAvatar" mode="aspectFill" class="avatar" @click="uploadAvatar"></image>
       <view class="info">
         <view class="nickname">
           {{ userInfo.nickname || t('mine.wechatUser') }}
@@ -174,6 +174,10 @@
         <text class="arrow">›</text>
       </button>
     </view>
+
+    <view class="logout-box" v-if="userInfo">
+      <button class="logout-btn" @click="doLogout">退出登录</button>
+    </view>
   </view>
 </template>
 
@@ -268,6 +272,44 @@ const fetchCompanionStats = async () => {
 const switchMode = (m: 'customer' | 'companion') => {
   mode.value = m;
   if (m === 'companion') fetchCompanionStats();
+};
+
+const uploadAvatar = () => {
+  uni.chooseImage({
+    count: 1,
+    success: async (res: any) => {
+      uni.showLoading({ title: '上传中...' });
+      try {
+        const uploadRes = await uni.uploadFile({
+          url: 'http://127.0.0.1:8080/api/file/upload',
+          filePath: res.tempFilePaths[0],
+          name: 'file'
+        });
+        const data = JSON.parse(uploadRes.data);
+        if (data.code === 200) {
+          await request({ url: '/user/profile', method: 'PUT', data: { avatarUrl: data.data } });
+          userInfo.value.avatarUrl = data.data;
+          uni.showToast({ title: '头像已更新', icon: 'success' });
+        }
+      } catch (_) { uni.showToast({ title: '上传失败', icon: 'none' }); }
+      finally { uni.hideLoading(); }
+    }
+  });
+};
+
+const doLogout = () => {
+  uni.showModal({
+    title: '退出登录',
+    content: '确定要退出登录吗？',
+    success: (r: any) => {
+      if (r.confirm) {
+        userStore.logout();
+        userInfo.value = null;
+        isCompanion.value = false;
+        uni.showToast({ title: '已退出', icon: 'success' });
+      }
+    }
+  });
 };
 
 // 模拟快捷登录
@@ -529,7 +571,7 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   width: 100%;
   border-radius: 0;
   margin: 0;
-  line-height: normal;
+  line-height: 1.6;
   text-align: left;
 
   &::after { border: none; }
@@ -584,6 +626,9 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   margin-bottom: 4rpx;
   border-bottom: none;
   border: 1px solid rgba(var(--color-primary-rgb), 0.15);
+
+  .logout-box { padding: 40rpx 30rpx; }
+  .logout-btn { width: 100%; height: 88rpx; line-height: 88rpx; background: $bg-color-white; color: var(--color-error); border-radius: $border-radius-md; border: 1px solid var(--color-error); font-size: $font-size-base; }
 
   .theme-dark & {
     background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.15), rgba(var(--color-primary-rgb), 0.06));

@@ -1,87 +1,57 @@
-export type ThemeName = 'light' | 'dark';
-export type ThemeMode = 'auto' | ThemeName;
+/**
+ * @deprecated 此文件保留向后兼容。新代码请直接从 @/theme 导入。
+ *
+ * 迁移指南：
+ *   旧: import { themeTokens, type ThemeName } from '../theme/tokens';
+ *   新: import { themeEngine, type ThemeName } from '@/theme';
+ *
+ * 页面中不再需要手动绑定 themeClass 和 themeStyle，
+ * ThemeEngine 在 App.vue onLaunch 中自动注入 CSS 变量到页面根元素。
+ */
 
-type ThemeTokens = {
-  cssVars: Record<string, string>;
-  navigationBar: {
-    frontColor: '#000000' | '#ffffff';
-    backgroundColor: string;
-  };
-  tabBar: {
-    color: string;
-    selectedColor: string;
-    backgroundColor: string;
-    borderStyle: 'black' | 'white';
-  };
-};
+import { themeEngine } from './engine';
+import type { ThemeName, ThemeMode } from './theme.config';
 
-export const themeTokens: Record<ThemeName, ThemeTokens> = {
-  light: {
-    cssVars: {
-      '--bg-main': '#FAF5F5',
-      '--bg-card': '#FFFFFF',
-      '--border-color': 'rgba(255, 59, 92, 0.08)',
-      '--text-primary': '#1A1A1F',
-      '--text-secondary': '#5E6066',
-      '--text-muted': '#999A9F',
-      '--shadow-card': '0 8px 30px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(255, 59, 92, 0.04)',
-      '--shadow-floating': '0 12px 40px rgba(255, 59, 92, 0.12)',
-      '--color-primary': '#FF3B5C',
-      '--color-primary-rgb': '255, 59, 92',
-      '--color-primary-light': '#FFF0F2',
-      '--color-primary-dark': '#D92241',
-      '--color-gradient-end': '#FF7B54',
-      '--color-accent': '#FF9F1C',
-      '--color-success': '#10B981',
-      '--color-error': '#EF4444',
-      '--color-glow': 'rgba(255, 59, 92, 0.05)',
-      '--color-glow-secondary': 'rgba(255, 159, 28, 0.03)'
-    },
-    navigationBar: {
-      frontColor: '#000000',
-      backgroundColor: '#FAF5F5'
-    },
-    tabBar: {
-      color: '#999A9F',
-      selectedColor: '#FF3B5C',
-      backgroundColor: '#FFFFFF',
-      borderStyle: 'black'
-    }
+// Re-export for backward compatibility
+export type { ThemeName, ThemeMode };
+
+/**
+ * @deprecated 请使用 themeEngine.getCssVars() 代替
+ */
+export const themeTokens = {
+  get light() {
+    return {
+      cssVars: themeEngine.getCssVars(),
+      navigationBar: {
+        frontColor: '#000000' as const,
+        backgroundColor: '#FAF5F5',
+      },
+      tabBar: {
+        color: '#A1A5B1',
+        selectedColor: '#FF3B5C',
+        backgroundColor: '#FFFFFF',
+        borderStyle: 'black' as const,
+      },
+    };
   },
-  dark: {
-    cssVars: {
-      '--bg-main': '#18181C',
-      '--bg-card': '#202127',
-      '--border-color': 'rgba(255, 255, 255, 0.04)', /* Even softer border */
-      '--text-primary': '#E2E4E9',
-      '--text-secondary': '#A1A5B1',
-      '--text-muted': '#737887',
-      '--shadow-card': '0 10px 30px rgba(0, 0, 0, 0.4), 0 2px 12px rgba(255, 59, 92, 0.06)', /* Added subtle coral glow */
-      '--shadow-floating': '0 12px 32px rgba(255, 59, 92, 0.15)',
-      '--color-primary': '#FF3B5C',
-      '--color-primary-rgb': '255, 59, 92',
-      '--color-primary-light': '#31171E', // Soft dark crimson for subtle backgrounds
-      '--color-primary-dark': '#D92241',
-      '--color-gradient-end': '#FF7B54',
-      '--color-accent': '#FF9F1C',
-      '--color-success': '#10B981',
-      '--color-error': '#EF4444',
-      '--color-glow': 'rgba(255, 59, 92, 0.08)',
-      '--color-glow-secondary': 'rgba(255, 159, 28, 0.05)'
-    },
-    navigationBar: {
-      frontColor: '#ffffff',
-      backgroundColor: '#18181C'
-    },
-    tabBar: {
-      color: '#737887',
-      selectedColor: '#FF3B5C',
-      backgroundColor: '#202127',
-      borderStyle: 'white'
-    }
-  }
+  get dark() {
+    return {
+      cssVars: themeEngine.getCssVars(),
+      navigationBar: {
+        frontColor: '#ffffff' as const,
+        backgroundColor: '#121216',
+      },
+      tabBar: {
+        color: '#737887',
+        selectedColor: '#FF5C73',
+        backgroundColor: '#24262D',
+        borderStyle: 'white' as const,
+      },
+    };
+  },
 };
 
+// 页面标题 — 保持不变
 export const pageTitles = {
   index: 'lobby.title',
   orderList: 'order.list',
@@ -96,7 +66,7 @@ export const pageTitles = {
   orderDetail: 'order.detail',
   orderReview: 'order.review',
   orderRefund: 'order.refund',
-  admin: 'admin.title'
+  admin: 'admin.title',
 } as const;
 
 export const pageRouteTitleKeys: Record<string, string> = {
@@ -113,11 +83,11 @@ export const pageRouteTitleKeys: Record<string, string> = {
   'pages/order/detail': pageTitles.orderDetail,
   'pages/order/review': pageTitles.orderReview,
   'pages/order/refund': pageTitles.orderRefund,
-  'pages/admin/index': pageTitles.admin
+  'pages/admin/index': pageTitles.admin,
 };
 
 export const tabBarItems = [
   { index: 0, textKey: 'tabs.lobby' },
   { index: 1, textKey: 'tabs.orders' },
-  { index: 2, textKey: 'tabs.mine' }
+  { index: 2, textKey: 'tabs.mine' },
 ] as const;

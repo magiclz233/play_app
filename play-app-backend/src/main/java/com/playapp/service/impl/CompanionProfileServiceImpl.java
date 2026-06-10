@@ -148,19 +148,30 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
     }
 
     @Override
-    public Page<CompanionVO> getCompanionPage(Integer current, Integer size, Integer categoryId) {
+    public Page<CompanionVO> getCompanionPage(Integer current, Integer size, Integer categoryId,
+                                                String keyword, Integer gender, String sortBy) {
         Page<CompanionProfile> page = new Page<>(current, size);
         LambdaQueryWrapper<CompanionProfile> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(CompanionProfile::getAuditStatus, 1);
 
-        // 按分类筛选：通过关联技能表
+        // 关键词搜索（昵称或简介）
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.and(w -> w.like(CompanionProfile::getNickname, keyword)
+                    .or().like(CompanionProfile::getSummary, keyword));
+        }
+
+        // 性别筛选
+        if (gender != null && gender > 0) {
+            wrapper.eq(CompanionProfile::getGender, gender);
+        }
+
+        // 按分类筛选
         if (categoryId != null) {
             List<Long> companionIds = companionSkillMapper.selectList(
                     new LambdaQueryWrapper<CompanionSkill>()
                             .eq(CompanionSkill::getCategoryId, categoryId)
                             .eq(CompanionSkill::getStatus, 1)
             ).stream().map(CompanionSkill::getCompanionId).collect(Collectors.toList());
-
             if (companionIds.isEmpty()) {
                 Page<CompanionVO> empty = new Page<>(current, size, 0);
                 empty.setRecords(List.of());
@@ -169,9 +180,16 @@ public class CompanionProfileServiceImpl extends ServiceImpl<CompanionProfileMap
             wrapper.in(CompanionProfile::getUserId, companionIds);
         }
 
-        wrapper.orderByDesc(CompanionProfile::getIsRecommend, CompanionProfile::getSortWeight, CompanionProfile::getRating);
-        this.page(page, wrapper);
+        // 排序
+        if ("rating".equals(sortBy)) {
+            wrapper.orderByDesc(CompanionProfile::getRating);
+        } else if ("newest".equals(sortBy)) {
+            wrapper.orderByDesc(CompanionProfile::getCreateTime);
+        } else {
+            wrapper.orderByDesc(CompanionProfile::getIsRecommend, CompanionProfile::getSortWeight, CompanionProfile::getRating);
+        }
 
+        this.page(page, wrapper);
         Page<CompanionVO> voPage = new Page<>(current, size, page.getTotal());
         voPage.setRecords(page.getRecords().stream().map(this::toCompanionVO).collect(Collectors.toList()));
         return voPage;

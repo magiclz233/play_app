@@ -6,7 +6,9 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.playapp.common.BusinessException;
 import com.playapp.common.ErrorCode;
+import com.playapp.entity.CompanionProfile;
 import com.playapp.entity.User;
+import com.playapp.mapper.CompanionProfileMapper;
 import com.playapp.mapper.UserMapper;
 import com.playapp.service.UserService;
 import com.playapp.utils.JwtUtils;
@@ -28,6 +30,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final WxMaService wxMaService;
     private final JwtUtils jwtUtils;
     private final StringRedisTemplate redisTemplate;
+    private final CompanionProfileMapper companionProfileMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -59,9 +62,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 this.updateById(user);
             }
 
-            // 4. 判断是否为已认证陪玩 (在真实业务中需要联查 companion_profiles 表)
-            // 这里为了演示，默认为 1 (客户)
-            Integer role = 1; 
+            // 4. 判断角色：检查是否为已认证陪玩
+            Integer role = 1; // 默认客户
+            CompanionProfile companion = companionProfileMapper.selectById(user.getId());
+            if (companion != null && companion.getAuditStatus() == 1) {
+                role = 2; // 认证陪玩
+            }
+            // 管理员判断：phone 为特定号码（后续可改DB查询）
+            if ("admin".equals(user.getPhone()) || "13800000000".equals(user.getPhone())) {
+                role = 3;
+            }
 
             // 5. 生成 JWT Token
             String token = jwtUtils.generateToken(user.getId(), openid, role);

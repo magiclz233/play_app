@@ -1,5 +1,5 @@
 <template>
-  <view :class="['container', appStore.themeClass]" :style="appStore.themeStyle">
+  <view class="container">
     <!-- 顶部状态栏占位 -->
     <view class="status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -11,7 +11,7 @@
       </view>
       <view class="search-box">
         <view class="search-icon"></view>
-        <input type="text" :placeholder="t('lobby.searchPlaceholder')" placeholder-class="placeholder" />
+        <input type="text" v-model="searchKeyword" :placeholder="t('lobby.searchPlaceholder')" placeholder-class="placeholder" @confirm="doSearch" />
       </view>
     </view>
 
@@ -55,7 +55,7 @@
           <text class="title-text">{{ t('lobby.popularRank') }}</text>
         </view>
         <view class="ranking-cards">
-          <view v-for="(item, index) in rankList.slice(0, 3)" :key="index" :class="['rank-card', 'rank-' + (index + 1)]" @click="goToDetail(item.userId)">
+          <view v-for="(item, index) in rankList.slice(0, 3)" :key="index" :class="['rank-card', 'rank-' + (index + 1)]" @click="goToDetail(item.userId)" hover-class="card-hover">
             <view class="rank-crown">
               <text class="crown-mark" v-if="index === 0">TOP</text>
               <text class="crown-badge" v-else>{{ index + 1 }}</text>
@@ -92,9 +92,9 @@
         </view>
       </view>
       <view class="companion-list" v-else-if="activeTab === 'recommend' && companionList.length > 0">
-        <view class="companion-card" v-for="(item, index) in companionList" :key="index" @click="goToDetail(item.userId)">
+        <view class="companion-card" v-for="(item, index) in companionList" :key="index" @click="goToDetail(item.userId)" hover-class="card-hover">
           <view class="card-cover-wrap">
-            <image :src="item.coverUrl" mode="aspectFill" class="card-cover"></image>
+            <image :src="item.coverUrl" mode="aspectFill" class="card-cover" lazy-load></image>
             <view class="status-badge" :class="{ 'busy': item.workStatus !== 1 }">
               <text class="dot"></text>
               <text>{{ item.workStatus === 1 ? t('lobby.available') : t('lobby.busy') }}</text>
@@ -105,13 +105,15 @@
             <view class="info-top">
               <text class="name">{{ item.nickname }}</text>
               <view class="rating">
-                <text class="star">★</text>
+                <svg viewBox="0 0 24 24" class="star-svg">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1"/>
+                </svg>
                 <text class="score">{{ item.rating }}</text>
               </view>
             </view>
 
             <!-- 语音微型播放气泡 -->
-            <view class="voice-capsule" v-if="item.voiceUrl" @click.stop="togglePlayVoice(item)">
+            <view class="voice-capsule" v-if="item.voiceUrl" @click.stop="togglePlayVoice(item)" :aria-label="playingVoiceUrl === item.voiceUrl ? '暂停语音' : '播放语音'">
               <view class="voice-icon" :class="{ pause: playingVoiceUrl === item.voiceUrl }"></view>
               <text class="voice-dur">{{ item.voiceDuration || 10 }}s</text>
             </view>
@@ -139,10 +141,10 @@
         </view>
       </view>
       <view class="request-list" v-else-if="activeTab === 'requests'">
-        <view class="request-card" v-for="(req, index) in requestList" :key="index">
+        <view class="request-card" v-for="(req, index) in requestList" :key="index" hover-class="card-hover">
           <view class="req-header">
             <view class="req-user">
-              <image :src="req.avatarUrl" mode="aspectFill" class="req-avatar"></image>
+              <image :src="req.avatarUrl" mode="aspectFill" class="req-avatar" lazy-load></image>
               <text class="req-name">{{ req.nickname }}</text>
             </view>
             <text class="req-time">{{ req.timeAgo }}</text>
@@ -199,10 +201,8 @@
 <script setup lang="ts">
 import {ref, onMounted, onUnmounted, computed} from 'vue';
 import {request} from '../../utils/request';
-import {useAppStore} from '../../store/app';
 import {t} from '../../utils/i18n';
 
-const appStore = useAppStore();
 const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 20);
 const currentCity = ref('杭州市');
 const activeTab = ref<'recommend' | 'requests'>('recommend');
@@ -258,28 +258,10 @@ interface RequestItem {
   address: string;
   price: number;
 }
-const requestList = ref<RequestItem[]>([
-  {
-    avatarUrl: 'https://picsum.photos/seed/request-wang/120/120',
-    nickname: '王*亮',
-    timeAgo: '5分钟前',
-    description: '今晚需要一位台球搭子，最好会打美式台球，主要为了切磋技术，包间已开。',
-    reserveTime: '今天 20:00 - 22:00',
-    address: '下城区世纪台球汇',
-    price: 120
-  },
-  {
-    avatarUrl: 'https://picsum.photos/seed/request-chen/120/120',
-    nickname: '陈*东',
-    timeAgo: '15分钟前',
-    description: '需要两位剧本杀（阿瓦隆）搭子，差人上车，都是熟人，氛围活跃不沉闷。',
-    reserveTime: '明天 14:00 - 18:00',
-    address: '拱墅区探案谋杀剧本杀馆',
-    price: 90
-  }
-]);
+const requestList = ref<RequestItem[]>([]);
 
 // 需求发布弹窗
+const searchKeyword = ref('');
 const showPostModal = ref(false);
 const newRequestDesc = ref('');
 const newRequestTime = ref('');
@@ -474,6 +456,12 @@ const goToDetail = (id: number) => {
   uni.navigateTo({ url: `/pages/companion/detail?id=${id}` });
 };
 
+const doSearch = () => {
+  if (searchKeyword.value.trim()) {
+    uni.navigateTo({ url: `/pages/companion/list?keyword=${encodeURIComponent(searchKeyword.value.trim())}` });
+  }
+};
+
 const goToCompanion = () => {
   uni.navigateTo({ url: '/pages/companion/apply' });
 };
@@ -591,7 +579,7 @@ const goToCompanion = () => {
   justify-content: space-between;
   margin: 0 30rpx 20rpx;
   padding: 24rpx 28rpx;
-  background: linear-gradient(135deg, #FFF8F0, #FFEAE0);
+  background: linear-gradient(135deg, var(--bg-subtle), rgba(var(--color-primary-rgb), 0.06));
   border-radius: var(--radius-lg);
   border: 1px solid rgba(var(--color-primary-rgb), 0.1);
   box-shadow: var(--shadow-card);
@@ -892,7 +880,9 @@ const goToCompanion = () => {
           font-size: 22rpx;
           font-weight: bold;
           
-          .star {
+          .star-svg {
+            width: 24rpx;
+            height: 24rpx;
             margin-right: 4rpx;
           }
         }
@@ -1127,6 +1117,13 @@ const goToCompanion = () => {
   font-size: var(--font-size-sm);
 }
 
+/* 卡片触摸反馈 */
+.card-hover {
+  opacity: 0.85;
+  transform: scale(0.98);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
 .skeleton-block,
 .skeleton-line {
   background: linear-gradient(90deg, rgba(var(--color-primary-rgb), 0.05), rgba(255, 255, 255, 0.08), rgba(var(--color-primary-rgb), 0.05));
@@ -1167,7 +1164,7 @@ const goToCompanion = () => {
   padding: 16rpx 28rpx;
   border-radius: var(--radius-full);
   box-shadow: var(--shadow-floating);
-  z-index: 99;
+  z-index: $z-index-sticky;
 
   .fab-icon {
     width: 26rpx;

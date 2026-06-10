@@ -3,20 +3,27 @@ package com.playapp.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.playapp.common.Result;
+import com.playapp.dto.CompanionFinishDTO;
 import com.playapp.dto.WithdrawDTO;
+import com.playapp.entity.CompanionTagRelation;
 import com.playapp.entity.CompanionWallet;
 import com.playapp.entity.Order;
+import com.playapp.entity.Tag;
 import com.playapp.entity.WalletTransaction;
+import com.playapp.mapper.CompanionTagRelationMapper;
+import com.playapp.mapper.TagMapper;
 import com.playapp.service.CompanionWalletService;
 import com.playapp.service.OrderService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/companion")
@@ -25,6 +32,8 @@ public class CompanionDashboardController {
 
     private final CompanionWalletService companionWalletService;
     private final OrderService orderService;
+    private final TagMapper tagMapper;
+    private final CompanionTagRelationMapper companionTagRelationMapper;
 
     /**
      * 获取助教工作台统计数据
@@ -97,5 +106,48 @@ public class CompanionDashboardController {
         String reason = body.getOrDefault("reason", "");
         orderService.rejectOrder(userId, orderNo, reason);
         return Result.success("已拒单");
+    }
+
+    /**
+     * 陪玩发起完工申请
+     */
+    @PutMapping("/orders/{orderNo}/request-finish")
+    public Result<?> requestFinish(@AuthenticationPrincipal Long userId, @PathVariable String orderNo,
+                                   @Valid @RequestBody CompanionFinishDTO dto) {
+        orderService.companionRequestFinish(userId, orderNo, dto);
+        return Result.success("完工申请已提交，等待用户确认");
+    }
+
+    /**
+     * 获取系统所有标签
+     */
+    @GetMapping("/tags")
+    public Result<List<Tag>> getAllTags() {
+        return Result.success(tagMapper.selectList(
+                new LambdaQueryWrapper<Tag>().eq(Tag::getStatus, 1).orderByAsc(Tag::getSortOrder)));
+    }
+
+    /**
+     * 更新自己的标签
+     */
+    @PutMapping("/tags")
+    @Transactional
+    public Result<?> updateMyTags(@AuthenticationPrincipal Long userId, @RequestBody Map<String, Object> body) {
+        @SuppressWarnings("unchecked")
+        List<Integer> tagIds = ((List<Number>) body.get("tagIds")).stream()
+                .map(Number::intValue).collect(Collectors.toList());
+
+        // 先删除旧标签
+        companionTagRelationMapper.delete(
+                new LambdaQueryWrapper<CompanionTagRelation>().eq(CompanionTagRelation::getCompanionId, userId));
+
+        // 添加新标签
+        for (Integer tagId : tagIds) {
+            CompanionTagRelation relation = new CompanionTagRelation();
+            relation.setCompanionId(userId);
+            relation.setTagId(tagId);
+            companionTagRelationMapper.insert(relation);
+        }
+        return Result.success("标签更新成功");
     }
 }

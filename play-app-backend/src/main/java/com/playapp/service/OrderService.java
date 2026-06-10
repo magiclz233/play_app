@@ -1,8 +1,12 @@
 package com.playapp.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.playapp.dto.CompanionFinishDTO;
+import com.playapp.dto.DisputeCreateDTO;
+import com.playapp.dto.DisputeResolveDTO;
 import com.playapp.dto.OrderCreateDTO;
 import com.playapp.entity.Order;
+import com.playapp.vo.OrderCreateVO;
 
 public interface OrderService extends IService<Order> {
 
@@ -10,9 +14,9 @@ public interface OrderService extends IService<Order> {
      * 创建预约订单
      * @param userId 下单用户ID
      * @param dto 订单参数
-     * @return 订单号
+     * @return 订单创建结果（含费用明细）
      */
-    String createOrder(Long userId, OrderCreateDTO dto);
+    OrderCreateVO createOrder(Long userId, OrderCreateDTO dto);
 
     /**
      * 获取微信支付统一下单参数
@@ -55,6 +59,11 @@ public interface OrderService extends IService<Order> {
     void rejectOrder(Long companionId, String orderNo, String reason);
 
     /**
+     * 陪玩发起完工申请
+     */
+    void companionRequestFinish(Long companionId, String orderNo, CompanionFinishDTO dto);
+
+    /**
      * 客户取消订单
      */
     void cancelOrder(Long userId, String orderNo, String reason);
@@ -88,4 +97,19 @@ public interface OrderService extends IService<Order> {
      * 管理员处理退款申请
      */
     void adminApproveRefund(Long adminId, String orderNo, String remark);
+
+    /**
+     * 自动关闭超时未支付订单（定时任务调用）
+     */
+    void autoCloseExpiredOrders();
+
+    /**
+     * 发起纠纷申诉（用户或陪玩）
+     */
+    void createDispute(Long userId, String role, DisputeCreateDTO dto);
+
+    /**
+     * 管理员处理纠纷
+     */
+    void resolveDispute(Long adminId, DisputeResolveDTO dto);
 }

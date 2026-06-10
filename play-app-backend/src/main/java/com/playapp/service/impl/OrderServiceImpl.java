@@ -7,6 +7,9 @@ import com.github.binarywang.wxpay.bean.request.WxPayUnifiedOrderRequest;
 import com.github.binarywang.wxpay.service.WxPayService;
 import com.playapp.common.BusinessException;
 import com.playapp.common.ErrorCode;
+import com.playapp.dto.CompanionFinishDTO;
+import com.playapp.dto.DisputeCreateDTO;
+import com.playapp.dto.DisputeResolveDTO;
 import com.playapp.dto.OrderCreateDTO;
 import com.playapp.entity.CompanionProfile;
 import com.playapp.entity.CompanionSkill;
@@ -25,15 +28,21 @@ import com.playapp.service.CompanionProfileService;
 import com.playapp.service.CompanionWalletService;
 import com.playapp.service.OrderService;
 import com.playapp.service.UserService;
+import com.playapp.vo.OrderCreateVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
@@ -53,9 +62,47 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private WxPayService wxPayService;
 
+    @Value("${app.platform.fee-rate:0.05}")
+    private BigDecimal feeRate;
+
+    @Value("${app.platform.fee-min:5.00}")
+    private BigDecimal feeMin;
+
+    @Value("${app.platform.fee-max:50.00}")
+    private BigDecimal feeMax;
+
+    /**
+     * 订单状态转移映射表
+     * key=当前状态, value=允许转移到的目标状态集合
+     */
+    private static final Map<Integer, Set<Integer>> ALLOWED_TRANSITIONS = Map.ofEntries(
+            Map.entry(10, Set.of(20, 100, 250)),          // 待付款 → 已付款/取消/超时关闭
+            Map.entry(20, Set.of(30, 100, 110, 200)),     // 已付款 → 客服拉群/取消/退款中/纠纷
+            Map.entry(30, Set.of(40, 50, 70, 100, 200)),  // 已拉群 → 确认/服务中(admin)/确认完工(admin)/取消/纠纷
+            Map.entry(40, Set.of(50, 70, 100, 200)),      // 已确认 → 服务中/确认完工(admin)/取消/纠纷
+            Map.entry(50, Set.of(60, 70, 100, 200)),      // 服务中 → 完工/确认完工(admin)/取消/纠纷
+            Map.entry(60, Set.of(70, 100, 200)),           // 待确认完工 → 用户确认/取消/纠纷
+            Map.entry(70, Set.of(80, 200)),                // 已确认完工 → 平台放款/纠纷
+            Map.entry(80, Set.of(200)),                    // 已完成 → 纠纷
+            Map.entry(100, Set.of(110)),                   // 取消申请 → 退款处理中
+            Map.entry(110, Set.of(120, 130)),              // 退款处理中 → 全额退款/部分退款
+            Map.entry(200, Set.of(210))                    // 纠纷申诉 → 纠纷处理完成
+            // 120(全额退款), 130(部分退款), 210(纠纷完成), 250(已关闭) 为终态, 不允许再转移
+    );
+
+    /**
+     * 校验订单状态转移是否合法
+     */
+    private void assertValidTransition(Integer fromStatus, Integer toStatus) {
+        Set<Integer> allowed = ALLOWED_TRANSITIONS.get(fromStatus);
+        if (allowed == null || !allowed.contains(toStatus)) {
+            throw BusinessException.orderStatusIllegal(fromStatus, toStatus);
+        }
+    }
+
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String createOrder(Long userId, OrderCreateDTO dto) {
+    public OrderCreateVO createOrder(Long userId, OrderCreateDTO dto) {
         // 1. 校验陪玩状态
         CompanionProfile companion = companionProfileService.getById(dto.getCompanionId());
         if (companion == null || companion.getAuditStatus() != 1) {
@@ -85,11 +132,16 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
         BigDecimal totalAmount = pricePerHour.multiply(BigDecimal.valueOf(dto.getHours()));
 
-        // 3. 生成内部订单号
+        // 3. 计算平台费用（费率 * 总金额，最低 feeMin 元，最高 feeMax 元封顶）
+        BigDecimal rawFee = totalAmount.multiply(feeRate).setScale(2, RoundingMode.HALF_UP);
+        BigDecimal platformFee = rawFee.max(feeMin).min(feeMax);
+        BigDecimal companionAmount = totalAmount.subtract(platformFee);
+
+        // 4. 生成内部订单号
         String orderNo = "PO" + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMddHHmmss"))
                 + String.format("%04d", (int) (Math.random() * 10000));
 
-        // 4. 创建订单记录
+        // 5. 创建订单记录
         Order order = new Order();
         order.setOrderNo(orderNo);
         order.setUserId(userId);
@@ -98,8 +150,8 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         order.setPricePerHour(pricePerHour);
         order.setStatus(Order.STATUS_PENDING_PAY);
         order.setTotalAmount(totalAmount);
-        order.setCompanionAmount(totalAmount);
-        order.setPlatformFee(BigDecimal.ZERO);
+        order.setCompanionAmount(companionAmount);
+        order.setPlatformFee(platformFee);
         order.setRefundAmount(BigDecimal.ZERO);
         if (dto.getAppointmentTime() != null) {
             order.setReserveDate(dto.getAppointmentTime().toLocalDate());
@@ -115,9 +167,10 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         this.save(order);
         addStatusLog(order, null, Order.STATUS_PENDING_PAY, userId, 1, "用户创建订单");
 
-        log.info("订单创建成功, orderNo: {}, userId: {}, companionId: {}", orderNo, userId, dto.getCompanionId());
+        log.info("订单创建成功, orderNo: {}, userId: {}, companionId: {}, totalAmount: {}, platformFee: {}, companionAmount: {}",
+                orderNo, userId, dto.getCompanionId(), totalAmount, platformFee, companionAmount);
 
-        return orderNo;
+        return new OrderCreateVO(orderNo, totalAmount, platformFee, companionAmount);
     }
 
     @Override
@@ -242,13 +295,12 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (!order.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.FORBIDDEN, "只有下单用户才能确认服务完成");
         }
-        if (order.getStatus() != Order.STATUS_FINISH_REQUESTED && order.getStatus() != Order.STATUS_USER_CONFIRMED) {
-            throw new BusinessException(ErrorCode.PARAM_ERROR, "当前订单状态无法确认完工");
-        }
-
+        // 幂等：已确认则跳过
         if (order.getStatus() == Order.STATUS_USER_CONFIRMED) {
             return;
         }
+        // 状态转移校验
+        assertValidTransition(order.getStatus(), Order.STATUS_USER_CONFIRMED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_USER_CONFIRMED);
@@ -266,9 +318,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (order == null || !order.getCompanionId().equals(companionId)) {
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
         }
-        if (order.getStatus() != Order.STATUS_PAID) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法接单");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_GROUP_CREATED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_GROUP_CREATED);
@@ -286,9 +336,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
         if (order == null || !order.getCompanionId().equals(companionId)) {
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
         }
-        if (order.getStatus() != Order.STATUS_PAID) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法拒单");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_CANCEL_REQUESTED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_CANCEL_REQUESTED);
@@ -301,28 +349,58 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
 
     @Override
     @Transactional(rollbackFor = Exception.class)
+    public void companionRequestFinish(Long companionId, String orderNo, CompanionFinishDTO dto) {
+        Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
+        if (order == null || !order.getCompanionId().equals(companionId)) {
+            throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
+        }
+        assertValidTransition(order.getStatus(), Order.STATUS_FINISH_REQUESTED);
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_FINISH_REQUESTED);
+        this.updateById(order);
+
+        ServiceRecord record = ensureServiceRecord(order);
+        record.setFinishRemark(dto.getFinishRemark());
+        record.setFinishType(dto.getFinishType() != null ? dto.getFinishType() : 1);
+        if (dto.getActualDuration() != null && dto.getActualDuration() > 0) {
+            record.setActualDuration(dto.getActualDuration());
+            record.setActualEndTime(LocalDateTime.now());
+        }
+        serviceRecordMapper.updateById(record);
+
+        addStatusLog(order, fromStatus, Order.STATUS_FINISH_REQUESTED, companionId, 2,
+                "陪玩发起完工: " + dto.getFinishRemark());
+        log.info("陪玩 {} 发起完工申请: {}, 备注: {}", companionId, orderNo, dto.getFinishRemark());
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
     public void cancelOrder(Long userId, String orderNo, String reason) {
         Order order = this.getOne(new LambdaQueryWrapper<Order>().eq(Order::getOrderNo, orderNo));
         if (order == null || !order.getUserId().equals(userId)) {
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
         }
         int status = order.getStatus();
-        if (status != Order.STATUS_PENDING_PAY && status != Order.STATUS_PAID) {
-            throw new BusinessException(ErrorCode.ORDER_CANNOT_CANCEL, "当前订单状态无法取消");
-        }
 
         // 已付款的进入退款流程，未付款的直接关闭
-        int fromStatus = order.getStatus();
+        int targetStatus;
         if (status == Order.STATUS_PAID) {
-            order.setStatus(Order.STATUS_CANCEL_REQUESTED);
+            targetStatus = Order.STATUS_CANCEL_REQUESTED;
             order.setRefundAmount(order.getTotalAmount());
+        } else if (status == Order.STATUS_PENDING_PAY) {
+            targetStatus = Order.STATUS_CLOSED;
         } else {
-            order.setStatus(Order.STATUS_CLOSED);
+            throw new BusinessException(ErrorCode.ORDER_CANNOT_CANCEL, "当前订单状态无法取消");
         }
+        assertValidTransition(status, targetStatus);
+
+        int fromStatus = order.getStatus();
+        order.setStatus(targetStatus);
         order.setCancelReason(reason);
         order.setCancelType(1); // 1-用户取消
         this.updateById(order);
-        addStatusLog(order, fromStatus, order.getStatus(), userId, 1, reason);
+        addStatusLog(order, fromStatus, targetStatus, userId, 1, reason);
         log.info("用户 {} 取消订单: {}, 原因: {}", userId, orderNo, reason);
     }
 
@@ -334,14 +412,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
             throw new BusinessException(ErrorCode.ORDER_NOT_FOUND, "订单不存在或无权操作");
         }
 
-        int status = order.getStatus();
-        if (status != Order.STATUS_PAID
-                && status != Order.STATUS_GROUP_CREATED
-                && status != Order.STATUS_CONFIRMED
-                && status != Order.STATUS_IN_SERVICE
-                && status != Order.STATUS_FINISH_REQUESTED) {
-            throw new BusinessException(ErrorCode.ORDER_CANNOT_CANCEL, "当前订单状态无法申请退款");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_CANCEL_REQUESTED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_CANCEL_REQUESTED);
@@ -357,9 +428,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void adminMarkGroupCreated(Long adminId, String orderNo, String remark) {
         Order order = getOrderByNo(orderNo);
-        if (order.getStatus() != Order.STATUS_PAID) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已付款订单才能标记拉群完成");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_GROUP_CREATED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_GROUP_CREATED);
@@ -375,9 +444,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void adminStartService(Long adminId, String orderNo, String actualAddress, String remark) {
         Order order = getOrderByNo(orderNo);
-        if (order.getStatus() != Order.STATUS_GROUP_CREATED && order.getStatus() != Order.STATUS_CONFIRMED) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已拉群订单才能标记服务开始");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_IN_SERVICE);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_IN_SERVICE);
@@ -401,12 +468,7 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     @Transactional(rollbackFor = Exception.class)
     public void adminConfirmFinish(Long adminId, String orderNo, String finishRemark, Integer finishType) {
         Order order = getOrderByNo(orderNo);
-        if (order.getStatus() != Order.STATUS_GROUP_CREATED
-                && order.getStatus() != Order.STATUS_CONFIRMED
-                && order.getStatus() != Order.STATUS_IN_SERVICE
-                && order.getStatus() != Order.STATUS_FINISH_REQUESTED) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态无法核销完工");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_USER_CONFIRMED);
 
         LocalDateTime now = LocalDateTime.now();
         int fromStatus = order.getStatus();
@@ -434,11 +496,9 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public void adminSettleOrder(Long adminId, String orderNo, String remark) {
         Order order = getOrderByNo(orderNo);
         if (order.getStatus() == Order.STATUS_SETTLED) {
-            return;
+            return; // 幂等
         }
-        if (order.getStatus() != Order.STATUS_USER_CONFIRMED) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有已确认完工订单才能结算");
-        }
+        assertValidTransition(order.getStatus(), Order.STATUS_SETTLED);
 
         int fromStatus = order.getStatus();
         order.setStatus(Order.STATUS_SETTLED);
@@ -455,23 +515,119 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     public void adminApproveRefund(Long adminId, String orderNo, String remark) {
         Order order = getOrderByNo(orderNo);
         if (order.getStatus() == Order.STATUS_FULL_REFUNDED || order.getStatus() == Order.STATUS_PARTIAL_REFUNDED) {
-            return;
-        }
-        if (order.getStatus() != Order.STATUS_CANCEL_REQUESTED && order.getStatus() != Order.STATUS_REFUNDING) {
-            throw new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "只有退款申请中的订单才能退款");
+            return; // 幂等
         }
 
+        // 确定退款金额和退款类型
+        BigDecimal refundAmount = order.getRefundAmount() != null && order.getRefundAmount().compareTo(BigDecimal.ZERO) > 0
+                ? order.getRefundAmount()
+                : order.getTotalAmount();
+
+        boolean isFullRefund = refundAmount.compareTo(order.getTotalAmount()) >= 0;
+        int targetStatus = isFullRefund ? Order.STATUS_FULL_REFUNDED : Order.STATUS_PARTIAL_REFUNDED;
+        assertValidTransition(order.getStatus(), targetStatus);
+
         int fromStatus = order.getStatus();
-        BigDecimal refundAmount = order.getRefundAmount() == null || order.getRefundAmount().compareTo(BigDecimal.ZERO) <= 0
-                ? order.getTotalAmount()
-                : order.getRefundAmount();
-        order.setStatus(Order.STATUS_FULL_REFUNDED);
+        order.setStatus(targetStatus);
         order.setRefundAmount(refundAmount);
         this.updateById(order);
 
-        recordPayment(order, "REFUND-" + order.getOrderNo(), order.getTransactionId(), 2, refundAmount, 1, remark);
-        addStatusLog(order, fromStatus, Order.STATUS_FULL_REFUNDED, adminId, 3, defaultText(remark, "平台确认全额退款"));
+        int paymentType = isFullRefund ? 2 : 3; // 2-全额退款 3-部分退款
+        recordPayment(order, "REFUND-" + order.getOrderNo(), order.getTransactionId(), paymentType, refundAmount, 1, remark);
+        addStatusLog(order, fromStatus, targetStatus, adminId, 3,
+                defaultText(remark, isFullRefund ? "平台确认全额退款" : "平台确认部分退款"));
         auditLogService.record(adminId, "ORDER_REFUND", "order", orderNo, remark);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void autoCloseExpiredOrders() {
+        int timeoutMinutes = 15; // 默认15分钟，可从配置读取
+        LocalDateTime expireTime = LocalDateTime.now().minusMinutes(timeoutMinutes);
+
+        List<Order> expiredOrders = this.list(
+                new LambdaQueryWrapper<Order>()
+                        .eq(Order::getStatus, Order.STATUS_PENDING_PAY)
+                        .lt(Order::getCreateTime, expireTime));
+
+        int closedCount = 0;
+        for (Order order : expiredOrders) {
+            try {
+                assertValidTransition(order.getStatus(), Order.STATUS_CLOSED);
+                int fromStatus = order.getStatus();
+                order.setStatus(Order.STATUS_CLOSED);
+                order.setCancelReason("超时未支付自动关闭");
+                order.setCancelType(4); // 4-系统自动关闭
+                this.updateById(order);
+                addStatusLog(order, fromStatus, Order.STATUS_CLOSED, 0L, 4, "超时未支付自动关闭");
+                closedCount++;
+            } catch (Exception e) {
+                log.error("自动关闭订单失败: orderId={}, orderNo={}", order.getOrderId(), order.getOrderNo(), e);
+            }
+        }
+
+        if (closedCount > 0) {
+            log.info("定时任务：自动关闭超时未支付订单 {} 笔", closedCount);
+        }
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void createDispute(Long userId, String role, DisputeCreateDTO dto) {
+        Order order = getOrderByNo(dto.getOrderNo());
+        // 验证权限：用户或陪玩
+        if (!order.getUserId().equals(userId) && !order.getCompanionId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "无权操作此订单");
+        }
+        assertValidTransition(order.getStatus(), Order.STATUS_DISPUTE);
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_DISPUTE);
+        // 将纠纷信息存入 extra JSONB
+        java.util.Map<String, Object> extra = order.getExtra() != null ? order.getExtra() : new java.util.HashMap<>();
+        java.util.Map<String, Object> dispute = new java.util.LinkedHashMap<>();
+        dispute.put("initiator", role);
+        dispute.put("initiatorId", userId);
+        dispute.put("reasonType", dto.getReasonType());
+        dispute.put("description", dto.getDescription());
+        dispute.put("evidenceUrls", dto.getEvidenceUrls());
+        dispute.put("createTime", LocalDateTime.now().toString());
+        extra.put("dispute", dispute);
+        order.setExtra(extra);
+        this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_DISPUTE, userId, role.equals("companion") ? 2 : 1,
+                "发起纠纷申诉: " + dto.getDescription());
+        log.info("订单 {} 纠纷申诉已提交, 发起方: {}", dto.getOrderNo(), role);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void resolveDispute(Long adminId, DisputeResolveDTO dto) {
+        Order order = getOrderByNo(dto.getOrderNo());
+        assertValidTransition(order.getStatus(), Order.STATUS_DISPUTE_RESOLVED);
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_DISPUTE_RESOLVED);
+        // 更新 extra 中的纠纷解决信息
+        java.util.Map<String, Object> extra = order.getExtra() != null ? order.getExtra() : new java.util.HashMap<>();
+        java.util.Map<String, Object> dispute = extra.containsKey("dispute")
+                ? (java.util.Map<String, Object>) extra.get("dispute") : new java.util.LinkedHashMap<>();
+        dispute.put("resolution", dto.getResolution());
+        dispute.put("resolvedBy", adminId);
+        dispute.put("resolvedAt", LocalDateTime.now().toString());
+        dispute.put("remark", dto.getRemark());
+        extra.put("dispute", dispute);
+        order.setExtra(extra);
+        this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_DISPUTE_RESOLVED, adminId, 3,
+                "管理员处理纠纷: " + dto.getResolution());
+        auditLogService.record(adminId, "DISPUTE_RESOLVE", "order", dto.getOrderNo(), dto.getRemark());
+
+        // 如果需要退款
+        if ("refund_full".equals(dto.getResolution()) || "refund_partial".equals(dto.getResolution())) {
+            adminApproveRefund(adminId, dto.getOrderNo(), dto.getRemark());
+        }
+        log.info("管理员 {} 处理纠纷: orderNo={}, resolution={}", adminId, dto.getOrderNo(), dto.getResolution());
     }
 
     private Order getOrderByNo(String orderNo) {
@@ -508,21 +664,24 @@ public class OrderServiceImpl extends ServiceImpl<OrderMapper, Order> implements
     }
 
     private void markPaid(Order order, String transactionId, String notifyData, String reason) {
+        // 支付流水去重
         if (transactionId != null && paymentRecordMapper.selectCount(
                 new LambdaQueryWrapper<PaymentRecord>().eq(PaymentRecord::getWxTransactionId, transactionId)) > 0) {
             return;
         }
-        if (order.getStatus() != Order.STATUS_PENDING_PAY && order.getStatus() != Order.STATUS_PAID) {
+        // 幂等：已支付则跳过
+        if (order.getStatus() == Order.STATUS_PAID) {
             return;
         }
-        if (order.getStatus() == Order.STATUS_PENDING_PAY) {
-            int fromStatus = order.getStatus();
-            order.setStatus(Order.STATUS_PAID);
-            order.setTransactionId(transactionId);
-            order.setPayTime(LocalDateTime.now());
-            this.updateById(order);
-            addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, reason);
-        }
+        // 状态转移校验
+        assertValidTransition(order.getStatus(), Order.STATUS_PAID);
+
+        int fromStatus = order.getStatus();
+        order.setStatus(Order.STATUS_PAID);
+        order.setTransactionId(transactionId);
+        order.setPayTime(LocalDateTime.now());
+        this.updateById(order);
+        addStatusLog(order, fromStatus, Order.STATUS_PAID, 0L, 4, reason);
         recordPayment(order, "PAY-" + order.getOrderNo(), transactionId, 1, order.getTotalAmount(), 1, notifyData);
         log.info("订单支付成功处理完成: {}", order.getOrderNo());
     }

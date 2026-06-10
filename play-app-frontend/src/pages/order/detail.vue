@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" v-if="order">
+  <view class="container" v-if="order">
     <!-- 状态头 -->
     <view class="status-header">
       <view class="status-text">{{ getStatusText(order.status) }}</view>
@@ -375,7 +375,7 @@ const hasActions = (status: number) => canCancel(status) || canRefund(status) ||
 /* 暗色模式特殊微调 */
 .theme-dark {
   .status-header {
-    background: linear-gradient(135deg, $color-primary-dark, #2E1015);
+    background: linear-gradient(135deg, $color-primary-dark, var(--bg-card));
   }
   .btn {
     background-color: rgba(255, 255, 255, 0.05);

@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" v-if="companion">
+  <view class="container" v-if="companion">
     <view class="companion-card">
       <image :src="coverUrl" mode="aspectFill" class="avatar"></image>
       <view class="info">
@@ -58,11 +58,15 @@
       </view>
       <view class="cost-row">
         <text class="label">{{ appStore.locale === 'en' ? 'Platform Fee' : '平台服务费' }}</text>
-        <text class="value">¥0.00</text>
+        <text class="value">¥{{ orderResult ? orderResult.platformFee.toFixed(2) : (totalServiceFee * 0.05).toFixed(2) }}</text>
+      </view>
+      <view class="cost-row">
+        <text class="label">{{ appStore.locale === 'en' ? 'Companion Income' : '助教收入' }}</text>
+        <text class="value" style="color: var(--color-success)">¥{{ orderResult ? orderResult.companionAmount.toFixed(2) : (totalServiceFee * 0.95).toFixed(2) }}</text>
       </view>
       <view class="cost-row total">
         <text class="label">{{ appStore.locale === 'en' ? 'Total' : '合计' }}</text>
-        <text class="value highlight">¥{{ totalServiceFee }}</text>
+        <text class="value highlight">¥{{ orderResult ? orderResult.totalAmount.toFixed(2) : totalServiceFee }}</text>
       </view>
     </view>
 
@@ -74,7 +78,7 @@
     <view class="bottom-bar">
       <view class="total-box">
         <text class="label">{{ appStore.locale === 'en' ? 'Total:' : '合计：' }}</text>
-        <text class="price">¥{{ totalServiceFee }}</text>
+        <text class="price">¥{{ orderResult ? orderResult.totalAmount.toFixed(2) : totalServiceFee }}</text>
       </view>
       <button class="pay-btn" @click="submitOrder" :loading="isSubmitting" hover-class="button-hover">
         {{ appStore.locale === 'en' ? 'Pay Now' : '立即支付' }}
@@ -131,6 +135,7 @@ const addressDetail = ref('');
 const customerWechat = ref('');
 const isSubmitting = ref(false);
 const showTimePicker = ref(false);
+const orderResult = ref<{ orderNo: string; totalAmount: number; platformFee: number; companionAmount: number } | null>(null);
 
 const pad = (num: number) => String(num).padStart(2, '0');
 const formatDateValue = (date: Date) => `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
@@ -262,7 +267,9 @@ const submitOrder = async () => {
     });
 
     if (createRes.code === 200) {
-      uni.navigateTo({ url: `/pages/order/pay?orderNo=${createRes.data}&amount=${totalServiceFee.value}` });
+      const result = createRes.data as { orderNo: string; totalAmount: number; platformFee: number; companionAmount: number };
+      orderResult.value = result;
+      uni.navigateTo({ url: `/pages/order/pay?orderNo=${result.orderNo}&amount=${result.totalAmount}` });
     }
   } finally {
     isSubmitting.value = false;
@@ -495,7 +502,7 @@ textarea { height: 140rpx; padding-top: 20rpx; }
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.5);
-  z-index: 999;
+  z-index: $z-index-modal;
   display: flex;
   align-items: flex-end;
 }
@@ -503,7 +510,7 @@ textarea { height: 140rpx; padding-top: 20rpx; }
 .time-panel {
   width: 100%;
   max-height: 80vh;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 40rpx 40rpx 0 0;
   padding: 40rpx 30rpx;
   padding-bottom: calc(40rpx + env(safe-area-inset-bottom));

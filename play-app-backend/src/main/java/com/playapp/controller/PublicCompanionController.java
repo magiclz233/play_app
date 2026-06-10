@@ -26,20 +26,23 @@ public class PublicCompanionController {
      */
     @GetMapping("/recommended")
     public Result<List<CompanionVO>> getRecommended() {
-        Page<CompanionVO> page = companionProfileService.getCompanionPage(1, 10, null);
+        Page<CompanionVO> page = companionProfileService.getCompanionPage(1, 10, null, null, null, null);
         return Result.success(page.getRecords());
     }
 
     /**
-     * 分页查询助教大厅列表
+     * 分页查询助教大厅列表（支持搜索/筛选/排序）
      */
     @GetMapping
     public Result<Page<CompanionVO>> getList(
             @RequestParam(defaultValue = "1") Integer current,
             @RequestParam(defaultValue = "10") Integer size,
-            @RequestParam(required = false) Integer categoryId) {
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Integer gender,
+            @RequestParam(required = false) String sortBy) {
 
-        return Result.success(companionProfileService.getCompanionPage(current, size, categoryId));
+        return Result.success(companionProfileService.getCompanionPage(current, size, categoryId, keyword, gender, sortBy));
     }
 
     /**

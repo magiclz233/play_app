@@ -36,4 +36,9 @@ public class BusinessException extends RuntimeException {
     public static BusinessException orderStatusIllegal() {
         return new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL, "当前订单状态不允许此操作");
     }
+
+    public static BusinessException orderStatusIllegal(int fromStatus, int toStatus) {
+        return new BusinessException(ErrorCode.ORDER_STATUS_ILLEGAL,
+                "不允许从状态 " + fromStatus + " 变更为 " + toStatus);
+    }
 }

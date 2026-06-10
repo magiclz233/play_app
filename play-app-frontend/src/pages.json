@@ -4,8 +4,6 @@
 			"path": "pages/index/index",
 			"style": {
 				"navigationBarTitleText": "同城伴玩",
-				"navigationBarBackgroundColor": "#FFFFFF",
-				"navigationBarTextStyle": "black",
 				"enablePullDownRefresh": true
 			}
 		},
@@ -57,6 +55,12 @@
 			}
 		},
 		{
+			"path": "pages/companion/profile-edit",
+			"style": {
+				"navigationBarTitleText": "编辑资料"
+			}
+		},
+		{
 			"path": "pages/order/create",
 			"style": {
 				"navigationBarTitleText": "确认订单"
@@ -81,6 +85,12 @@
 			}
 		},
 		{
+			"path": "pages/order/timeline",
+			"style": {
+				"navigationBarTitleText": "服务进度"
+			}
+		},
+		{
 			"path": "pages/order/refund",
 			"style": {
 				"navigationBarTitleText": "申请退款"
@@ -96,15 +106,15 @@
 	"globalStyle": {
 		"navigationBarTextStyle": "black",
 		"navigationBarTitleText": "同城伴玩",
-		"navigationBarBackgroundColor": "#FAF6F0",
-		"backgroundColor": "#FAF6F0",
+		"navigationBarBackgroundColor": "#FAF5F5",
+		"backgroundColor": "#FAF5F5",
 		"app-plus": {
-			"background": "#FAF6F0"
+			"background": "#FAF5F5"
 		}
 	},
 	"tabBar": {
-		"color": "#9CA3AF",
-		"selectedColor": "#FF5B71",
+		"color": "#A1A5B1",
+		"selectedColor": "#FF3B5C",
 		"backgroundColor": "#FFFFFF",
 		"borderStyle": "black",
 		"list": [

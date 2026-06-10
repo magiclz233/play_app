@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
+  <view class="container">
     <view class="header">
       <text class="title">管理后台</text>
     </view>
@@ -294,7 +294,7 @@ const getReportStatusText = (status: number) => {
 }
 .tabs {
   display: flex;
-  background: #fff;
+  background: var(--bg-card);
   padding: 0 30rpx;
   border-bottom: 1rpx solid $border-color-light;
   .tab {
@@ -311,7 +311,7 @@ const getReportStatusText = (status: number) => {
   padding: 20rpx;
 }
 .card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: $border-radius-md;
   padding: 24rpx;
   margin-bottom: 20rpx;

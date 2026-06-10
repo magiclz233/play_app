@@ -1,7 +1,7 @@
 <template>
-  <view class="container" :class="appStore.themeClass">
+  <view class="container">
     <view class="pay-header">
-      <text class="time-limit">{{ appStore.locale === 'en' ? 'Time Remaining 14:59' : '支付剩余时间 14:59' }}</text>
+      <text class="time-limit">{{ appStore.locale === 'en' ? 'Time Remaining ' : '支付剩余时间 ' }}{{ countdownText }}</text>
       <view class="amount-box">
         <text class="currency">¥</text>
         <text class="amount">{{ amount }}</text>
@@ -15,7 +15,7 @@
           <text class="iconfont icon-wechat-pay"></text>
           <text class="name">{{ appStore.locale === 'en' ? 'WeChat Pay' : '微信支付' }}</text>
         </view>
-        <radio checked color="#10B981"></radio>
+        <radio checked :color="String(radioColor)"></radio>
       </view>
     </view>
 
@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted, onUnmounted } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
 import { request } from '../../utils/request';
 import { useAppStore } from '../../store/app';
@@ -38,11 +38,33 @@ const appStore = useAppStore();
 const orderNo = ref('');
 const amount = ref('0.00');
 const isPaying = ref(false);
+const radioColor = '#10B981';
+const remainingSeconds = ref(900); // 15分钟
+const countdownText = ref('15:00');
+let timer: any = null;
 
 onLoad((options: any) => {
   orderNo.value = options?.orderNo || '';
   amount.value = options?.amount || '0.00';
+  startCountdown();
 });
+
+onUnmounted(() => { if (timer) clearInterval(timer); });
+
+const startCountdown = () => {
+  timer = setInterval(() => {
+    if (remainingSeconds.value <= 0) {
+      clearInterval(timer);
+      uni.showToast({ title: '订单已超时', icon: 'none' });
+      setTimeout(() => uni.reLaunch({ url: '/pages/order/list' }), 1500);
+      return;
+    }
+    remainingSeconds.value--;
+    const m = Math.floor(remainingSeconds.value / 60);
+    const s = remainingSeconds.value % 60;
+    countdownText.value = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  }, 1000);
+};
 
 const doPay = async () => {
   if (!orderNo.value) return;
@@ -161,7 +183,7 @@ const doPay = async () => {
       align-items: center;
       
       .icon-wechat-pay {
-        color: #10B981;
+        color: var(--color-success);
         font-size: 48rpx;
         margin-right: 20rpx;
       }
@@ -188,7 +210,7 @@ const doPay = async () => {
   .pay-btn {
     width: 100%;
     height: 96rpx;
-    background-color: #10B981;
+    background-color: var(--color-success);
     color: #fff;
     border-radius: $border-radius-pill;
     font-size: 32rpx;

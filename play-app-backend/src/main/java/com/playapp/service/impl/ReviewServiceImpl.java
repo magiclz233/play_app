@@ -1,6 +1,7 @@
 package com.playapp.service.impl;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.playapp.common.BusinessException;
 import com.playapp.common.ErrorCode;
@@ -19,6 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -53,6 +55,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
         review.setRating(dto.getRating());
         review.setContent(dto.getContent());
         review.setImages(dto.getImages());
+        review.setIsAnonymous(dto.getIsAnonymous() != null && dto.getIsAnonymous());
         review.setStatus(1);
 
         this.save(review);
@@ -75,7 +78,7 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
 
         int newCount = currentCount + 1;
         int newScore = currentScore + newRating;
-        BigDecimal avgRating = new BigDecimal(newScore).divide(new BigDecimal(newCount), 1, RoundingMode.HALF_UP);
+        BigDecimal avgRating = new BigDecimal(newScore).divide(new BigDecimal(newCount), 2, RoundingMode.HALF_UP);
 
         profile.setTotalRatingCount(newCount);
         profile.setTotalRatingScore(newScore);
@@ -83,5 +86,31 @@ public class ReviewServiceImpl extends ServiceImpl<ReviewMapper, Review> impleme
         companionProfileMapper.updateById(profile);
 
         log.info("助教 {} 评分更新: 次数={}, 均分={}", companionId, newCount, avgRating);
+    }
+
+    @Override
+    public Page<Review> getReviewsByCompanion(Long companionId, Integer current, Integer size) {
+        Page<Review> page = new Page<>(current, size);
+        LambdaQueryWrapper<Review> wrapper = new LambdaQueryWrapper<>();
+        wrapper.eq(Review::getCompanionId, companionId)
+                .eq(Review::getStatus, 1)
+                .orderByDesc(Review::getCreateTime);
+        return this.page(page, wrapper);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void replyReview(Long companionId, Long reviewId, String content) {
+        Review review = this.getById(reviewId);
+        if (review == null || !review.getCompanionId().equals(companionId)) {
+            throw new BusinessException(ErrorCode.NOT_FOUND, "评价不存在或无权操作");
+        }
+        if (review.getReplyContent() != null && !review.getReplyContent().isBlank()) {
+            throw new BusinessException(ErrorCode.PARAM_ERROR, "已回复过该评价");
+        }
+        review.setReplyContent(content);
+        review.setReplyTime(LocalDateTime.now());
+        this.updateById(review);
+        log.info("陪玩 {} 回复评价: reviewId={}", companionId, reviewId);
     }
 }

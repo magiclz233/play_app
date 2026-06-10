@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass">
+  <view class="container">
     <view class="timeline">
       <view class="event" v-for="item in events" :key="item.id">
         <view class="dot" :style="{ background: dotColor(item.eventType) }"></view>
@@ -55,9 +55,21 @@ const eventLabels: Record<number, string> = {
   9: '发起投诉', 10: '异常上报'
 };
 
-const dotColors = ['', '#3B82F6','#10B981','#F59E0B','#8B5CF6','#EC4899','#EF4444','#10B981','#6B7280','#EF4444','#F97316'];
+// 时间线事件点颜色：按事件类型映射到语义色
+const dotColorMap: Record<number, string> = {
+  1: 'var(--color-info)',       // 订单创建 → 蓝
+  2: 'var(--color-success)',    // 已付款 → 绿
+  3: 'var(--color-accent)',     // 客服拉群 → 琥珀
+  4: '#8B5CF6',                 // 双方确认 → 紫 (无对应语义色)
+  5: '#EC4899',                 // 服务进行 → 粉 (无对应语义色)
+  6: 'var(--color-warning)',    // 陪玩完工 → 橙
+  7: 'var(--color-success)',    // 用户确认 → 绿
+  8: 'var(--text-muted)',       // 平台放款 → 灰
+  9: 'var(--color-error)',      // 发起投诉 → 红
+  10:'#F97316',                 // 异常上报 → 深橙 (无对应语义色)
+};
 
-const dotColor = (type: number) => dotColors[type] || '#6B7280';
+const dotColor = (type: number) => dotColorMap[type] || 'var(--text-muted)';
 const eventLabel = (type: number) => eventLabels[type] || `事件${type}`;
 const formatTime = (t: string) => t ? t.replace('T',' ').substring(0,16) : '';
 
@@ -92,8 +104,8 @@ const addEvent = async (eventType: number, label: string) => {
 .desc { font-size: 26rpx; color: $text-color-regular; line-height: 1.5; }
 .empty { text-align: center; padding: 100rpx 0; color: $text-color-secondary; }
 
-.fab { position: fixed; bottom: 120rpx; right: 40rpx; width: 96rpx; height: 96rpx; background: $gradient-primary; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: 99; box-shadow: 0 8px 24px rgba(255,59,92,0.3); }
+.fab { position: fixed; bottom: 120rpx; right: 40rpx; width: 96rpx; height: 96rpx; background: $gradient-primary; border-radius: 50%; display: flex; align-items: center; justify-content: center; z-index: $z-index-sticky; box-shadow: 0 8px 24px rgba(255,59,92,0.3); }
 .fab-icon { color: #fff; font-size: 48rpx; font-weight: bold; }
-.action-panel { position: fixed; bottom: 240rpx; right: 20rpx; background: $bg-color-white; border-radius: $border-radius-lg; padding: 20rpx; z-index: 99; box-shadow: $box-shadow-sm; display: flex; flex-wrap: wrap; width: 300rpx; }
+.action-panel { position: fixed; bottom: 240rpx; right: 20rpx; background: $bg-color-white; border-radius: $border-radius-lg; padding: 20rpx; z-index: $z-index-sticky; box-shadow: $box-shadow-sm; display: flex; flex-wrap: wrap; width: 300rpx; }
 .action { width: 50%; text-align: center; padding: 20rpx 0; font-size: 24rpx; color: $text-color-primary; }
 </style>

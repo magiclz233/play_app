@@ -1,5 +1,5 @@
 <template>
-  <view class="container" :class="appStore.themeClass" :style="appStore.themeStyle">
+  <view class="container">
     <view class="header-bg"></view>
     
     <!-- 顶部数据概览 -->
@@ -19,6 +19,18 @@
           <text class="label">总接单数</text>
           <text class="value">{{ stats.totalOrderCount || 0 }}</text>
         </view>
+      </view>
+    </view>
+
+    <!-- 快捷入口 -->
+    <view class="quick-actions">
+      <view class="action-item" @click="goToProfileEdit">
+        <text class="action-icon">✏️</text>
+        <text class="action-text">编辑资料</text>
+      </view>
+      <view class="action-item" @click="goToWallet">
+        <text class="action-icon">💰</text>
+        <text class="action-text">我的钱包</text>
       </view>
     </view>
 
@@ -58,6 +70,9 @@
           <view class="card-bottom" v-if="item.status === 20">
             <button class="btn primary" @click="takeOrder(item)">接单</button>
             <button class="btn danger" @click="rejectOrder(item)">拒单</button>
+          </view>
+          <view class="card-bottom" v-if="item.status === 50">
+            <button class="btn primary" @click="requestFinish(item)">发起完工</button>
           </view>
         </view>
         
@@ -139,6 +154,10 @@ const goToWallet = () => {
   uni.navigateTo({ url: '/pages/companion/wallet' });
 };
 
+const goToProfileEdit = () => {
+  uni.navigateTo({ url: '/pages/companion/profile-edit' });
+};
+
 const takeOrder = async (item: any) => {
   try {
     const res = await request({ url: `/companion/orders/${item.orderNo}/accept`, method: 'PUT' });
@@ -161,6 +180,30 @@ const rejectOrder = async (item: any) => {
           const res = await request({ url: `/companion/orders/${item.orderNo}/reject`, method: 'PUT', data: { reason: '助教拒单' } });
           if (res.code === 200) {
             uni.showToast({ title: '已拒单', icon: 'success' });
+            fetchOrders(true);
+          }
+        } catch (e) {
+          uni.showToast({ title: '操作失败', icon: 'none' });
+        }
+      }
+    }
+  });
+};
+
+const requestFinish = (item: any) => {
+  uni.showModal({
+    title: '发起完工',
+    content: '确认服务已完成，发起完工申请？',
+    success: async (modalRes: any) => {
+      if (modalRes.confirm) {
+        try {
+          const res = await request({
+            url: `/companion/orders/${item.orderNo}/request-finish`,
+            method: 'PUT',
+            data: { finishRemark: '陪玩申请完工', finishType: 1 }
+          });
+          if (res.code === 200) {
+            uni.showToast({ title: '已发起完工', icon: 'success' });
             fetchOrders(true);
           }
         } catch (e) {
@@ -220,6 +263,28 @@ const rejectOrder = async (item: any) => {
   }
 }
 
+.quick-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  margin: 0 30rpx 20rpx;
+  gap: 20rpx;
+
+  .action-item {
+    flex: 1;
+    background-color: $bg-color-white;
+    border-radius: $border-radius-md;
+    padding: 24rpx;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    box-shadow: $box-shadow-sm;
+  }
+  .action-icon { font-size: 36rpx; margin-bottom: 8rpx; }
+  .action-text { font-size: 24rpx; color: $text-color-regular; }
+}
+
 .section {
   position: relative;
   z-index: 1;
@@ -266,7 +331,7 @@ const rejectOrder = async (item: any) => {
     box-sizing: border-box;
     
     .order-card {
-      background-color: #F9FAFB;
+      background-color: var(--bg-main);
       border-radius: $border-radius-md;
       padding: 24rpx;
       margin-bottom: 20rpx;

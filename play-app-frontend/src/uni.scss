@@ -1,66 +1,74 @@
 /**
- * 自定义设计变量
- * 浅色保留暖杏基调，深色改为克制的墨蓝灰，统一使用蓝绿品牌色。
+ * 全局样式变量定义
+ *
+ * ⚠️ 此文件为编译时 SCSS 变量 + CSS 变量兜底值。
+ * 运行时的主题切换由 theme/engine.ts (ThemeEngine) 负责，
+ * 它会动态计算并注入 CSS 变量到页面根元素上。
+ *
+ * 三层设计令牌体系：
+ *   Layer 1: theme/primitives.ts — 原始色板
+ *   Layer 2: theme/semantic.ts   — 语义令牌（亮/暗映射）
+ *   Layer 3: theme/components.ts — 组件令牌
+ *   配置层: theme/theme.config.ts — 品牌色、圆角、间距、字体缩放
+ *
+ * 详细文档：docs/THEME_OPTIMIZATION_PLAN.md
  */
 
 /* ==========================================================================
-   1. CSS 变量定义 (用于支持自适应深浅色主题)
+   1. CSS 变量兜底值 (JS 注入失败时的降级方案)
+   这些值与 theme/primitives.ts + theme/semantic.ts 的亮色模式保持一致。
    ========================================================================== */
 
-/* 浅色模式 - 晨露粉杏与流光珊瑚 */
-.theme-light {
+/* 亮色模式默认值 + 暗色模式 CSS 媒体查询兜底 */
+page, :root {
+  /* ── 背景层级 ── */
   --bg-main: #FAF5F5;
   --bg-card: #FFFFFF;
-  --border-color: rgba(255, 59, 92, 0.06);
+  --bg-elevated: #FFFFFF;
+  --bg-subtle: #FFF0F2;
 
+  /* ── 文字层级 ── */
   --text-primary: #1A1A1F;
   --text-secondary: #5E6066;
-  --text-muted: #999A9F;
+  --text-muted: #A1A5B1;
+  --text-inverse: #FFFFFF;
 
-  --shadow-card: 0 8px 30px rgba(255, 59, 92, 0.04);
-  --shadow-floating: 0 16px 40px rgba(255, 59, 92, 0.12);
-}
-
-/* 深色模式 - 深曜星河与霓虹余晖 */
-.theme-dark {
-  --bg-main: #0B0B0F;
-  --bg-card: #13131A;
-  --border-color: rgba(255, 59, 92, 0.14);
-
-  --text-primary: #F3F4F6;
-  --text-secondary: #9CA3AF;
-  --text-muted: #6B7280;
-
-  --shadow-card: 0 12px 36px rgba(0, 0, 0, 0.5);
-  --shadow-floating: 0 16px 40px rgba(255, 59, 92, 0.22);
-}
-
-/* 全局共享主题变量 (明暗通用) */
-:root, page {
-  --bg-main: #FAF5F5;
-  --bg-card: #FFFFFF;
-  --border-color: rgba(255, 59, 92, 0.06);
-  --text-primary: #1A1A1F;
-  --text-secondary: #5E6066;
-  --text-muted: #999A9F;
-  --shadow-card: 0 8px 30px rgba(255, 59, 92, 0.04);
-  --shadow-floating: 0 16px 40px rgba(255, 59, 92, 0.12);
-
+  /* ── 品牌色 ── */
   --color-primary: #FF3B5C;
   --color-primary-rgb: 255, 59, 92;
-  --color-primary-light: rgba(255, 59, 92, 0.08);
-  --color-primary-dark: #D92241;
+  --color-primary-light: #FFF0F2;
+  --color-primary-dark: #CC2943;
   --color-gradient-end: #FF7B54;
   --color-accent: #FF9F1C;
-  --color-success: #10B981;
-  --color-error: #EF4444;
+  --color-accent-rgb: 255, 159, 28;
 
+  /* ── 状态色 ── */
+  --color-success: #10B981;
+  --color-warning: #FF9F1C;
+  --color-error: #EF4444;
+  --color-info: #3B82F6;
+
+  /* ── 边框与分割 ── */
+  --border-color: rgba(255, 59, 92, 0.08);
+  --border-strong: rgba(255, 59, 92, 0.25);
+
+  /* ── 阴影 ── */
+  --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(255, 59, 92, 0.04);
+  --shadow-floating: 0 12px 40px rgba(255, 59, 92, 0.12);
+  --shadow-glow: 0 0 20px rgba(255, 59, 92, 0.15);
+
+  /* ── 特殊效果色 ── */
+  --color-glow: rgba(255, 59, 92, 0.05);
+  --color-glow-secondary: rgba(255, 159, 28, 0.03);
+
+  /* ── 圆角 ── */
   --radius-sm: 8rpx;
   --radius-md: 16rpx;
   --radius-lg: 24rpx;
   --radius-xl: 32rpx;
   --radius-full: 999rpx;
 
+  /* ── 字号 ── */
   --font-size-xs: 20rpx;
   --font-size-sm: 24rpx;
   --font-size-base: 28rpx;
@@ -68,55 +76,145 @@
   --font-size-xl: 36rpx;
   --font-size-xxl: 48rpx;
 
+  /* ── 间距 ── */
   --space-xs: 8rpx;
   --space-sm: 16rpx;
   --space-md: 24rpx;
   --space-lg: 32rpx;
   --space-xl: 48rpx;
+
+  /* ── 组件令牌 ── */
+  --btn-primary-bg: linear-gradient(135deg, var(--color-primary), var(--color-gradient-end));
+  --btn-primary-shadow: 0 6px 16px rgba(var(--color-primary-rgb), 0.3);
+  --btn-primary-hover-bg: linear-gradient(135deg, var(--color-primary-dark), var(--color-gradient-end));
+  --btn-outline-bg: var(--color-primary-light);
+  --btn-outline-border: var(--color-primary);
+  --btn-outline-color: var(--color-primary);
+  --card-bg: var(--bg-card);
+  --card-border: 1px solid var(--border-color);
+  --card-shadow: var(--shadow-card);
+  --card-radius: var(--radius-lg);
+  --input-bg: var(--bg-main);
+  --input-border: 1px solid var(--border-color);
+  --input-focus-border: 1px solid var(--border-strong);
+  --input-placeholder: var(--text-muted);
+  --tag-bg: var(--color-primary-light);
+  --tag-color: var(--color-primary);
+  --modal-overlay: rgba(0, 0, 0, 0.6);
+  --modal-bg: var(--bg-elevated);
+  --fab-bg: var(--color-primary);
+  --fab-shadow: var(--shadow-floating);
 }
 
 /* ==========================================================================
-   2. 映射原有 SCSS 变量到 CSS 变量，确保老代码编译兼容性
+   1b. CSS 媒体查询兜底：系统暗色模式自动检测（JS 注入失败时生效）
    ========================================================================== */
+@media (prefers-color-scheme: dark) {
+  page, :root {
+    --bg-main: #121216;
+    --bg-card: #24262D;
+    --bg-elevated: #3D3F47;
+    --bg-subtle: rgba(255, 59, 92, 0.06);
+
+    --text-primary: #E2E4E9;
+    --text-secondary: #A1A5B1;
+    --text-muted: #737887;
+    --text-inverse: #1A1A1F;
+
+    /* 暗色下品牌色提亮 */
+    --color-primary: #FF5C73;
+    --color-primary-rgb: 255, 92, 115;
+    --color-primary-light: rgba(255, 59, 92, 0.12);
+    --color-primary-dark: #FF8596;
+    --color-gradient-end: #FF8B62;
+    --color-accent: #FFB347;
+    --color-accent-rgb: 255, 179, 71;
+
+    /* 暗色下状态色提亮 */
+    --color-success: #34D399;
+    --color-warning: #FFB347;
+    --color-error: #F87171;
+    --color-info: #60A5FA;
+
+    --border-color: rgba(255, 255, 255, 0.06);
+    --border-strong: rgba(255, 255, 255, 0.15);
+
+    --shadow-card: 0 8px 30px rgba(0, 0, 0, 0.5), 0 2px 12px rgba(255, 92, 115, 0.06);
+    --shadow-floating: 0 12px 40px rgba(255, 92, 115, 0.18);
+    --shadow-glow: 0 0 24px rgba(255, 92, 115, 0.2);
+
+    --color-glow: rgba(255, 92, 115, 0.08);
+    --color-glow-secondary: rgba(255, 179, 71, 0.05);
+  }
+}
+
+/* ==========================================================================
+   1c. prefers-reduced-motion 支持
+   ========================================================================== */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  /* 骨架屏动画也需禁用 */
+  .skeleton-block,
+  .skeleton-line {
+    animation: none !important;
+    background: rgba(var(--color-primary-rgb), 0.06) !important;
+  }
+}
+
+/* ==========================================================================
+   2. SCSS 变量映射 — 将原有 SCSS 变量指向 CSS 变量，确保老代码编译兼容
+   ========================================================================== */
+
+/* ── 品牌色 ── */
 $color-primary: var(--color-primary);
 $color-primary-light: var(--color-primary-light);
 $color-primary-dark: var(--color-primary-dark);
 $color-secondary: var(--color-accent);
+$color-accent: var(--color-accent);
 $color-success: var(--color-success);
-$color-warning: var(--color-accent);
+$color-warning: var(--color-warning);
 $color-error: var(--color-error);
+$color-info: var(--color-info);
 
-/* 渐变色 */
+/* ── 渐变色 ── */
 $gradient-primary: linear-gradient(135deg, $color-primary, var(--color-gradient-end));
 
-/* 文字颜色 */
+/* ── 文字颜色 ── */
 $text-color-primary: var(--text-primary);
 $text-color-regular: var(--text-secondary);
 $text-color-secondary: var(--text-muted);
 $text-color-placeholder: var(--text-muted);
 
-/* 背景颜色 */
+/* ── 背景颜色 ── */
 $bg-color-page: var(--bg-main);
 $bg-color-white: var(--bg-card);
+$bg-color-grey: var(--bg-main);
 $bg-color-hover: rgba(var(--color-primary-rgb), 0.08);
 
-/* 边框与分割线 */
+/* ── 边框与分割线 ── */
 $border-color: var(--border-color);
 $border-color-light: var(--border-color);
 
-/* 圆角大小 */
+/* ── 圆角大小 ── */
 $border-radius-sm: var(--radius-sm);
 $border-radius-md: var(--radius-md);
 $border-radius-lg: var(--radius-lg);
 $border-radius-xl: var(--radius-xl);
 $border-radius-pill: var(--radius-full);
 
-/* 阴影效果 */
+/* ── 阴影效果 ── */
 $box-shadow-sm: var(--shadow-card);
 $box-shadow-md: var(--shadow-card);
 $box-shadow-lg: var(--shadow-floating);
 
-/* 字号 */
+/* ── 字号 ── */
 $font-size-xs: 20rpx;
 $font-size-sm: 24rpx;
 $font-size-base: 28rpx;
@@ -124,23 +222,39 @@ $font-size-lg: 32rpx;
 $font-size-xl: 36rpx;
 $font-size-xxl: 48rpx;
 
-/* 间距 */
-$spacing-xs: var(--space-xs);
-$spacing-sm: var(--space-sm);
-$spacing-md: var(--space-md);
-$spacing-lg: var(--space-lg);
-$spacing-xl: var(--space-xl);
+/* ── 间距（保留 rpx 硬编码值，因为 SCSS 变量不支持 var() 的数学运算） ── */
+$spacing-xs: 8rpx;
+$spacing-sm: 16rpx;
+$spacing-md: 24rpx;
+$spacing-lg: 32rpx;
+$spacing-xl: 48rpx;
 
-/* z-index */
-$z-index-normal: 1;
+/* ── z-index 层级体系 ── */
+$z-index-dropdown: 10;
 $z-index-sticky: 100;
+$z-index-fixed: 200;
+$z-index-modal-backdrop: 500;
 $z-index-modal: 1000;
+$z-index-toast: 2000;
 
-/* uni-app 原生变量覆盖 */
+/* ── uni-app 原生变量覆盖 ── */
 $uni-color-primary: $color-primary;
 $uni-color-success: $color-success;
 $uni-color-warning: $color-warning;
 $uni-color-error: $color-error;
+$uni-color-info: $color-info;
 $uni-text-color: $text-color-primary;
-$uni-bg-color-grey: $bg-color-page;
+$uni-text-color-grey: $text-color-regular;
+$uni-bg-color: $bg-color-page;
+$uni-bg-color-grey: $bg-color-grey;
+$uni-bg-color-white: $bg-color-white;
 $uni-border-radius-base: $border-radius-md;
+$uni-border-radius-lg: $border-radius-lg;
+$uni-border-radius-sm: $border-radius-sm;
+$uni-border-color: $border-color;
+$uni-spacing-sm: $spacing-sm;
+$uni-spacing-md: $spacing-md;
+$uni-spacing-lg: $spacing-lg;
+$uni-font-size-sm: $font-size-sm;
+$uni-font-size-base: $font-size-base;
+$uni-font-size-lg: $font-size-lg;

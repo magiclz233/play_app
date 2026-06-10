@@ -1,7 +1,7 @@
 <template>
-  <view :class="['container', appStore.themeClass]" :style="appStore.themeStyle" v-if="companion">
+  <view class="container" v-if="companion">
     <!-- 顶部返回键 -->
-    <view class="back-btn" :style="{ top: (statusBarHeight + 10) + 'px' }" @click="goBack">
+    <view class="back-btn" :style="{ top: (statusBarHeight + 10) + 'px' }" @click="goBack" aria-label="返回">
       <text class="back-icon">‹</text>
     </view>
 
@@ -9,7 +9,7 @@
     <view class="album-wrap">
       <swiper class="album-swiper" circular autoplay interval="4000" @change="onSwiperChange">
         <swiper-item v-for="(img, index) in companion.photoUrls" :key="index">
-          <image :src="img" mode="aspectFill" class="album-img" @click="previewImage(index)"></image>
+          <image :src="img" mode="aspectFill" class="album-img" lazy-load @click="previewImage(index)"></image>
         </swiper-item>
       </swiper>
       <view class="indicator">
@@ -34,7 +34,20 @@
 
       <view class="basic-tags">
         <view class="tag gender" :class="companion.gender === 1 ? 'male' : 'female'">
-          <text class="gender-icon">{{ companion.gender === 1 ? '♂' : '♀' }}</text>
+          <!-- SVG 性别图标替代 emoji ♂/♀ -->
+          <svg v-if="companion.gender === 1" viewBox="0 0 24 24" class="gender-svg">
+            <circle cx="10" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="10" y1="13" x2="10" y2="22" stroke="currentColor" stroke-width="2"/>
+            <line x1="7" y1="17" x2="13" y2="17" stroke="currentColor" stroke-width="2"/>
+            <line x1="14" y1="2" x2="22" y2="10" stroke="currentColor" stroke-width="2"/>
+            <polyline points="18,0 22,0 22,4" fill="none" stroke="currentColor" stroke-width="2"/>
+          </svg>
+          <svg v-else viewBox="0 0 24 24" class="gender-svg">
+            <circle cx="12" cy="8" r="5" fill="none" stroke="currentColor" stroke-width="2"/>
+            <line x1="12" y1="13" x2="12" y2="18" stroke="currentColor" stroke-width="2"/>
+            <line x1="8" y1="22" x2="16" y2="22" stroke="currentColor" stroke-width="2"/>
+            <line x1="8" y1="15" x2="16" y2="15" stroke="currentColor" stroke-width="2"/>
+          </svg>
           <text>{{ t('detail.ageUnit', { age: companion.age }) }}</text>
         </view>
         <view class="tag height" v-if="companion.height">{{ companion.height }}cm</view>
@@ -59,7 +72,7 @@
     <!-- 语音展示区 -->
     <view class="section" v-if="companion.voiceUrl">
       <view class="section-title">{{ t('detail.voiceIntro') }}</view>
-      <view class="voice-card" @click="playVoice">
+      <view class="voice-card" @click="playVoice" :aria-label="isPlaying ? '暂停播放' : '播放语音介绍'">
         <view class="avatar-wrap">
           <image :src="companion.photoUrls?.[0]" mode="aspectFill" class="avatar"></image>
           <view class="play-btn" :class="{ 'playing': isPlaying }">
@@ -92,10 +105,15 @@
       <view class="reviews-list" v-if="reviewList.length > 0">
         <view class="review-item" v-for="(review, index) in reviewList" :key="index">
           <view class="rev-user">
-            <image :src="review.avatarUrl" mode="aspectFill" class="rev-avatar"></image>
+            <image :src="review.avatarUrl" mode="aspectFill" class="rev-avatar" lazy-load></image>
             <view class="rev-user-info">
               <text class="rev-name">{{ review.nickname }}</text>
-              <view class="rev-rating">★ {{ review.rating }}</view>
+              <view class="rev-rating">
+                <svg viewBox="0 0 24 24" class="rev-star-svg">
+                  <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="var(--color-accent)" stroke="var(--color-accent)" stroke-width="1"/>
+                </svg>
+                {{ review.rating }}
+              </view>
             </view>
             <text class="rev-date">{{ review.date }}</text>
           </view>
@@ -119,7 +137,7 @@
       </button>
     </view>
   </view>
-  <view v-else :class="['loading-full', appStore.themeClass]" :style="appStore.themeStyle">
+  <view v-else class="loading-full">
     <view class="detail-skeleton">
       <view class="skeleton-hero"></view>
       <view class="skeleton-panel">
@@ -158,22 +176,22 @@ interface ReviewItem {
   content: string;
   date: string;
 }
-const reviewList = ref<ReviewItem[]>([
-  {
-    avatarUrl: 'https://picsum.photos/seed/review-zhang/120/120',
-    nickname: '张*军',
-    rating: 5,
-    content: '服务态度非常好，台球技术很高，非常有耐心，推荐大家预约！',
-    date: '2026-06-05'
-  },
-  {
-    avatarUrl: 'https://picsum.photos/seed/review-li/120/120',
-    nickname: '李*豪',
-    rating: 5,
-    content: '性格活泼开朗，桌游很会带节奏，这顿玩的非常开心！',
-    date: '2026-06-03'
-  }
-]);
+const reviewList = ref<ReviewItem[]>([]);
+
+const fetchReviews = async (companionId: number) => {
+  try {
+    const res = await request({ url: `/companions/${companionId}/reviews?current=1&size=20`, method: 'GET' });
+    if (res.code === 200 && res.data?.records) {
+      reviewList.value = res.data.records.map((r: any) => ({
+        avatarUrl: r.isAnonymous ? '' : (`https://picsum.photos/seed/user${r.userId}/120/120`),
+        nickname: r.isAnonymous ? '匿名用户' : `用户${r.userId}`,
+        rating: r.rating,
+        content: r.content || '',
+        date: (r.createTime || '').substring(0, 10)
+      }));
+    }
+  } catch (_) {}
+};
 
 const normalizeDetail = (data: any) => ({
   ...data,
@@ -216,6 +234,7 @@ const fetchDetail = async (id: string) => {
     });
     if (res.code === 200) {
       companion.value = normalizeDetail(res.data);
+      fetchReviews(Number(id));
       if (companion.value.voiceUrl) {
         innerAudioContext.src = companion.value.voiceUrl;
       }
@@ -410,6 +429,12 @@ const goToOrder = () => {
       &.male { background-color: rgba(99, 102, 241, 0.1); color: #6366F1; }
       &.female { background-color: var(--color-primary-light); color: var(--color-primary); }
       &.height { background-color: var(--bg-main); color: var(--text-primary); border: 1px solid var(--border-color); }
+
+      .gender-svg {
+        width: 22rpx;
+        height: 22rpx;
+        margin-right: 6rpx;
+      }
     }
   }
   
@@ -498,7 +523,7 @@ const goToOrder = () => {
         height: 0;
         border-top: 9rpx solid transparent;
         border-bottom: 9rpx solid transparent;
-        border-left: 14rpx solid #fff;
+        border-left: 14rpx solid var(--bg-card);
         transform: translateX(2rpx);
         transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 
@@ -652,6 +677,14 @@ const goToOrder = () => {
           font-size: 18rpx;
           color: var(--color-accent);
           font-weight: bold;
+          display: flex;
+          align-items: center;
+
+          .rev-star-svg {
+            width: 20rpx;
+            height: 20rpx;
+            margin-right: 4rpx;
+          }
         }
       }
 
@@ -689,8 +722,8 @@ const goToOrder = () => {
   align-items: center;
   padding: 0 30rpx;
   box-shadow: var(--shadow-card);
-  z-index: 99;
-  
+  z-index: $z-index-sticky;
+
   .cs-btn {
     display: flex;
     flex-direction: column;
@@ -750,7 +783,7 @@ const goToOrder = () => {
     
     &[disabled] {
       background: var(--text-muted);
-      color: #9CA3AF;
+      color: var(--text-muted);
       box-shadow: none;
     }
   }

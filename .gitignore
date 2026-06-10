@@ -70,4 +70,5 @@ play-app-backend/uploads/
 # Claude
 # ==============================
 .claude/
+.agent/
 logs/
