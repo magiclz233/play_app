@@ -79,19 +79,21 @@ defineEmits<{
 
 .empty-action {
   margin-top: 36rpx;
-  padding: 18rpx 48rpx;
-  background: linear-gradient(135deg, var(--color-primary), var(--color-gradient-end));
-  color: #fff;
+  padding: 20rpx 64rpx;
+  background: rgba(var(--color-primary-rgb), 0.08);
+  color: var(--color-primary);
   border-radius: var(--radius-full);
-  border: none;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.2);
   font-size: var(--font-size-sm);
   font-weight: 600;
-  box-shadow: var(--shadow-floating);
+  box-shadow: inset 0 1px 1px rgba(255, 255, 255, 0.1);
   line-height: 1.5;
+  transition: all 0.2s ease;
 }
 
 .button-hover {
   opacity: 0.85;
   transform: scale(0.97);
+  background: rgba(var(--color-primary-rgb), 0.12);
 }
 </style>

@@ -54,7 +54,7 @@ public class SecurityConfig {
                 // 白名单
                 .requestMatchers(HttpMethod.GET, "/api/companions/**").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/requests").permitAll()
-                .requestMatchers("/api/wx/**", "/api/categories", "/error").permitAll()
+                .requestMatchers("/api/wx/**", "/api/categories", "/error", "/api/public/**", "/api/auth/login").permitAll()
                 // 助教相关写操作需认证
                 .requestMatchers(HttpMethod.POST, "/api/companions/**").authenticated()
                 .requestMatchers(HttpMethod.PUT, "/api/companions/**").authenticated()

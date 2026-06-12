@@ -2,6 +2,7 @@ package com.playapp.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.dto.AdminOrderActionDTO;
 import com.playapp.entity.Order;
@@ -39,6 +40,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderNo}/group-created")
+    @OpLog(module = "ORDER", action = "GROUP", detail = "标记拉群: #orderNo")
     public Result<?> markGroupCreated(
             @AuthenticationPrincipal Long adminId,
             @PathVariable String orderNo,
@@ -48,6 +50,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderNo}/start")
+    @OpLog(module = "ORDER", action = "START", detail = "服务开始: #orderNo")
     public Result<?> startService(
             @AuthenticationPrincipal Long adminId,
             @PathVariable String orderNo,
@@ -61,6 +64,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderNo}/finish")
+    @OpLog(module = "ORDER", action = "FINISH", detail = "核销完工: #orderNo")
     public Result<?> confirmFinish(
             @AuthenticationPrincipal Long adminId,
             @PathVariable String orderNo,
@@ -74,6 +78,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderNo}/settle")
+    @OpLog(module = "ORDER", action = "SETTLE", detail = "结算放款: #orderNo")
     public Result<?> settleOrder(
             @AuthenticationPrincipal Long adminId,
             @PathVariable String orderNo,
@@ -83,6 +88,7 @@ public class AdminOrderController {
     }
 
     @PutMapping("/{orderNo}/refund")
+    @OpLog(module = "ORDER", action = "REFUND", detail = "确认退款: #orderNo")
     public Result<?> approveRefund(
             @AuthenticationPrincipal Long adminId,
             @PathVariable String orderNo,

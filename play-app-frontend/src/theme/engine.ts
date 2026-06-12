@@ -325,8 +325,12 @@ class ThemeEngine {
       uni.setNavigationBarColor({
         ...navConfig,
         animation: { duration: 200, timingFunc: 'easeIn' },
+        fail: () => {}
       });
-      uni.setTabBarStyle(tabConfig);
+      uni.setTabBarStyle({
+        ...tabConfig,
+        fail: () => {}
+      });
     } catch (e) {
       // 某些页面可能没有 TabBar，忽略错误
       console.debug('[ThemeEngine] applyNativeUi error (may be expected):', e);

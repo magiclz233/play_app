@@ -1,5 +1,6 @@
 package com.playapp.controller;
 
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.dto.ThemeConfigUpdateDTO;
 import com.playapp.service.ThemeConfigService;
@@ -38,8 +39,9 @@ public class ThemeConfigController {
      */
     @PutMapping("/admin/theme-config")
     @PreAuthorize("hasRole('ADMIN')")
+    @OpLog(module = "SYSTEM", action = "UPDATE", detail = "更新主题配置")
     public Result<Void> updateConfig(@Valid @RequestBody ThemeConfigUpdateDTO dto) {
         themeConfigService.updateConfig(dto);
-        return Result.success("主题配置已更新");
+        return Result.success();
     }
 }

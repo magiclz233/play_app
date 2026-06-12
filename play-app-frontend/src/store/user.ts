@@ -2,11 +2,50 @@ import {computed, ref} from 'vue';
 import {defineStore} from 'pinia';
 import {request} from '../utils/request';
 
+/**
+ * 从 JWT Token 中解码 payload（不验证签名）
+ */
+function decodeJwtPayload(token: string): Record<string, any> | null {
+    try {
+        const parts = token.split('.');
+        if (parts.length !== 3) return null;
+        // JWT payload 是 Base64URL 编码的
+        const base64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+        const json = uni.base64ToArrayBuffer
+            ? new TextDecoder().decode(uni.base64ToArrayBuffer(base64))
+            : decodeURIComponent(escape(atob(base64))); // 兼容旧版本
+        return JSON.parse(json);
+    } catch {
+        return null;
+    }
+}
+
 export const useUserStore = defineStore('user', () => {
     const token = ref<string>(uni.getStorageSync('token') || '');
     const userInfo = ref<any>(uni.getStorageSync('userInfo') || null);
 
     const isLoggedIn = computed(() => !!token.value);
+
+    /** 从 JWT 中解析角色列表 */
+    const userRoles = computed<number[]>(() => {
+        if (!token.value) return [];
+        const payload = decodeJwtPayload(token.value);
+        if (!payload) return [];
+        // 优先读取 roles 数组（多角色），回退到单 role
+        if (payload.roles && Array.isArray(payload.roles)) {
+            return payload.roles.map(Number);
+        }
+        if (payload.role != null) {
+            return [Number(payload.role)];
+        }
+        return [];
+    });
+
+    /** 是否为管理员（roleId=3 或拥有 ROLE_ADMIN） */
+    const isAdmin = computed(() => userRoles.value.includes(3));
+
+    /** 是否为陪玩 */
+    const isCompanion = computed(() => userRoles.value.includes(2));
 
     // 登录成功后设置状态
     const login = (newToken: string, user: any) => {
@@ -62,6 +101,9 @@ export const useUserStore = defineStore('user', () => {
         token,
         userInfo,
         isLoggedIn,
+        userRoles,
+        isAdmin,
+        isCompanion,
         login,
         setToken,
         setUserInfo,

@@ -12,10 +12,10 @@
     </view>
 
     <view class="form-group">
-      <view class="section-title">{{ appStore.locale === 'en' ? 'Booking Info' : '预约信息' }}</view>
+      <view class="section-title">{{ t('order.bookingInfo') }}</view>
       <view class="form-item" @click="showTimePicker = true" hover-class="item-hover">
         <text class="label">{{ t('order.time') }}</text>
-        <view class="value" :class="{ placeholder: !selectedTime }">{{ formattedTime || (appStore.locale === 'en' ? 'Select Date & Time' : '请选择时间段') }}</view>
+        <view class="value" :class="{ placeholder: !selectedTime }">{{ formattedTime || t('order.selectTimePlaceholder') }}</view>
         <text class="iconfont icon-arrow-right"></text>
       </view>
 
@@ -31,63 +31,63 @@
     </view>
 
     <view class="form-group">
-      <view class="section-title">{{ appStore.locale === 'en' ? 'Contact & Address' : '对接信息' }}</view>
+      <view class="section-title">{{ t('order.contactInfo') }}</view>
       <view class="form-item vertical">
-        <text class="label">{{ appStore.locale === 'en' ? 'WeChat / Phone ID' : '微信号/手机号' }}</text>
-        <input class="std-input" v-model="customerWechat" :placeholder="appStore.locale === 'en' ? 'For group chat coordination' : '用于客服拉群和线下对接'" maxlength="50" placeholder-class="std-placeholder" />
+        <text class="label">{{ t('order.contactId') }}</text>
+        <input class="std-input" v-model="customerWechat" :placeholder="t('order.contactPlaceholder')" maxlength="50" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
         <text class="label">{{ t('order.reserveAddress') }}</text>
-        <input class="std-input" v-model="address" :placeholder="appStore.locale === 'en' ? 'Enter service location' : '请选择或填写服务地址'" maxlength="255" placeholder-class="std-placeholder" />
+        <input class="std-input" v-model="address" :placeholder="t('order.addressPlaceholder')" maxlength="255" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
-        <text class="label">{{ appStore.locale === 'en' ? 'Room / Door No. (Optional)' : '详细地址' }}</text>
-        <input class="std-input" v-model="addressDetail" :placeholder="appStore.locale === 'en' ? 'Door no, room no, etc. (Optional)' : '门牌号、包间号等（选填）'" maxlength="255" placeholder-class="std-placeholder" />
+        <text class="label">{{ t('order.addressDetail') }}</text>
+        <input class="std-input" v-model="addressDetail" :placeholder="t('order.addressDetailPlaceholder')" maxlength="255" placeholder-class="std-placeholder" />
       </view>
       <view class="form-item vertical">
         <text class="label">{{ t('detail.remark') }}</text>
-        <textarea v-model="remark" :placeholder="appStore.locale === 'en' ? 'Special requirements (Optional)' : '特殊要求（选填）'" maxlength="100" placeholder-class="std-placeholder"></textarea>
+        <textarea v-model="remark" :placeholder="t('order.remarkPlaceholder')" maxlength="100" placeholder-class="std-placeholder"></textarea>
       </view>
     </view>
 
     <view class="form-group">
-      <view class="section-title">{{ appStore.locale === 'en' ? 'Billing Summary' : '费用明细' }}</view>
+      <view class="section-title">{{ t('order.billingSummary') }}</view>
       <view class="cost-row">
         <text class="label">{{ serviceFeeLabel }} (¥{{ companion.pricePerHour }} x {{ hours }}{{ serviceHourUnit }})</text>
         <text class="value">¥{{ totalServiceFee }}</text>
       </view>
       <view class="cost-row">
-        <text class="label">{{ appStore.locale === 'en' ? 'Platform Fee' : '平台服务费' }}</text>
+        <text class="label">{{ t('order.platformFee') }}</text>
         <text class="value">¥{{ orderResult ? orderResult.platformFee.toFixed(2) : (totalServiceFee * 0.05).toFixed(2) }}</text>
       </view>
       <view class="cost-row">
-        <text class="label">{{ appStore.locale === 'en' ? 'Companion Income' : '助教收入' }}</text>
+        <text class="label">{{ t('order.companionIncome') }}</text>
         <text class="value" style="color: var(--color-success)">¥{{ orderResult ? orderResult.companionAmount.toFixed(2) : (totalServiceFee * 0.95).toFixed(2) }}</text>
       </view>
       <view class="cost-row total">
-        <text class="label">{{ appStore.locale === 'en' ? 'Total' : '合计' }}</text>
+        <text class="label">{{ t('order.total') }}</text>
         <text class="value highlight">¥{{ orderResult ? orderResult.totalAmount.toFixed(2) : totalServiceFee }}</text>
       </view>
     </view>
 
     <view class="safe-notice">
       <text class="iconfont icon-safe"></text>
-      <text>{{ appStore.locale === 'en' ? 'Payment is escrowed by platform until service confirmation.' : '支付资金由平台担保，服务完成并核销后再结算给助教。' }}</text>
+      <text>{{ t('order.safeNotice') }}</text>
     </view>
 
     <view class="bottom-bar">
       <view class="total-box">
-        <text class="label">{{ appStore.locale === 'en' ? 'Total:' : '合计：' }}</text>
+        <text class="label">{{ t('order.totalLabel') }}</text>
         <text class="price">¥{{ orderResult ? orderResult.totalAmount.toFixed(2) : totalServiceFee }}</text>
       </view>
       <button class="pay-btn" @click="submitOrder" :loading="isSubmitting" hover-class="button-hover">
-        {{ appStore.locale === 'en' ? 'Pay Now' : '立即支付' }}
+        {{ t('order.payNow') }}
       </button>
     </view>
 
     <view class="time-mask" v-if="showTimePicker" @click="showTimePicker = false">
       <view class="time-panel" @click.stop>
-        <view class="panel-title">{{ appStore.locale === 'en' ? 'Select Service Time' : '选择服务时间' }}</view>
+        <view class="panel-title">{{ t('order.selectServiceTime') }}</view>
         <scroll-view scroll-x class="date-tabs">
           <view class="date-tab"
                 v-for="item in dateOptions"
@@ -104,7 +104,7 @@
                 :class="{ active: selectedTime === slot, disabled: isSlotDisabled(slot) }"
                 @click="chooseTime(slot)">
             <text class="slot-time">{{ slot }}</text>
-            <text class="slot-status">{{ isSlotDisabled(slot) ? (appStore.locale === 'en' ? 'Full' : '不可预约') : (appStore.locale === 'en' ? 'Open' : '可预约') }}</text>
+            <text class="slot-status">{{ isSlotDisabled(slot) ? t('order.slotFull') : t('order.slotOpen') }}</text>
           </view>
         </view>
         <button class="panel-confirm" @click="confirmTime" hover-class="button-hover">{{ t('common.confirm') }}</button>
@@ -215,7 +215,7 @@ const chooseTime = (slot: string) => {
 
 const confirmTime = () => {
   if (!selectedTime.value || isSlotDisabled(selectedTime.value)) {
-    uni.showToast({ title: appStore.locale === 'en' ? 'Select available time slot' : '请选择可预约时间', icon: 'none' });
+    uni.showToast({ title: t('order.selectAvailableTime'), icon: 'none' });
     return;
   }
   showTimePicker.value = false;
@@ -237,15 +237,15 @@ const toLocalIso = (date: Date) => new Date(date.getTime() - date.getTimezoneOff
 const submitOrder = async () => {
   if (!companion.value) return;
   if (!selectedDateTime.value || isSlotDisabled(selectedTime.value)) {
-    uni.showToast({ title: appStore.locale === 'en' ? 'Select booking time first' : '请选择可预约时间', icon: 'none' });
+    uni.showToast({ title: t('order.selectAvailableTime'), icon: 'none' });
     return;
   }
   if (!customerWechat.value.trim()) {
-    uni.showToast({ title: appStore.locale === 'en' ? 'Please enter WeChat or Phone' : '请填写微信号或手机号', icon: 'none' });
+    uni.showToast({ title: t('order.enterContact'), icon: 'none' });
     return;
   }
   if (!address.value.trim()) {
-    uni.showToast({ title: appStore.locale === 'en' ? 'Please enter service location' : '请填写服务地址', icon: 'none' });
+    uni.showToast({ title: t('order.enterAddress'), icon: 'none' });
     return;
   }
 

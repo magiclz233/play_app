@@ -1,6 +1,7 @@
 package com.playapp.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.dto.AdminRiskHandleDTO;
 import com.playapp.entity.RiskReport;
@@ -28,6 +29,7 @@ public class AdminRiskReportController {
     }
 
     @PutMapping("/{id}")
+    @OpLog(module = "RISK", action = "HANDLE", detail = "处理举报: #id")
     public Result<?> handle(
             @AuthenticationPrincipal Long adminId,
             @PathVariable Long id,

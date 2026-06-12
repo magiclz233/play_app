@@ -174,12 +174,22 @@ export const useAppStore = defineStore('app', () => {
         }
     };
 
+    const themeStyle = computed(() => {
+        // 访问 currentTheme.value 建立响应式依赖
+        const theme = currentTheme.value;
+        const vars = themeEngine.getCssVars();
+        return Object.entries(vars)
+            .map(([k, v]) => `${k}: ${v}`)
+            .join('; ');
+    });
+
     return {
         // 状态
         themeMode,
         currentTheme,
         isDark,
         locale,
+        themeStyle,
 
         // 主题操作
         setThemeMode,

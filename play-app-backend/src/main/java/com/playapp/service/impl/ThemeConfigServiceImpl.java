@@ -54,20 +54,26 @@ public class ThemeConfigServiceImpl extends ServiceImpl<SystemConfigMapper, Syst
 
     @Override
     public Map<String, Object> getPublicConfig() {
-        SystemConfig config = this.getOne(
-            new LambdaQueryWrapper<SystemConfig>()
-                .eq(SystemConfig::getConfigKey, CONFIG_KEY_THEME)
-                .eq(SystemConfig::getStatus, 1)
-        );
+        try {
+            SystemConfig config = this.getOne(
+                new LambdaQueryWrapper<SystemConfig>()
+                    .eq(SystemConfig::getConfigKey, CONFIG_KEY_THEME)
+                    .eq(SystemConfig::getStatus, 1)
+            );
 
-        if (config == null || config.getConfigValue() == null) {
+            if (config == null || config.getConfigValue() == null) {
+                return DEFAULT_BRAND_CONFIG;
+            }
+
+            // 深度合并：数据库值覆盖默认值
+            Map<String, Object> merged = new HashMap<>(DEFAULT_BRAND_CONFIG);
+            merged.putAll(config.getConfigValue());
+            return merged;
+        } catch (Exception e) {
+            // 表不存在或其他数据库错误时，静默返回默认配置
+            log.debug("Failed to load theme config from DB, using defaults: {}", e.getMessage());
             return DEFAULT_BRAND_CONFIG;
         }
-
-        // 深度合并：数据库值覆盖默认值
-        Map<String, Object> merged = new HashMap<>(DEFAULT_BRAND_CONFIG);
-        merged.putAll(config.getConfigValue());
-        return merged;
     }
 
     @Override

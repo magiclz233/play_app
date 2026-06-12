@@ -57,7 +57,8 @@ const translations = {
       requestSuccess: '需求发布成功，系统已同步至客服。是否立即联系客服拉群对接？',
       contactForRequest: '联系客服拉群',
       contactForRequestContent: '确认联系专属企微客服协助建群对接吗？',
-      contactJump: '正在跳转客服拉群'
+      contactJump: '正在跳转客服拉群',
+      goToLobby: '去大厅逛逛'
     },
     detail: {
       voiceIntro: '真人语音介绍',
@@ -112,7 +113,13 @@ const translations = {
       profile: '个人资料',
       mockLogin: '模拟登录中...',
       loginSuccess: '登录成功',
-      mockLoginSuccess: '本地 Mock 登录成功'
+      mockLoginSuccess: '本地 Mock 登录成功',
+      uploading: '上传中...',
+      uploadFailed: '上传失败',
+      avatarUpdated: '头像已更新',
+      logout: '退出登录',
+      logoutConfirm: '确定要退出登录吗？',
+      loggedOut: '已退出'
     },
     order: {
       create: '确认订单',
@@ -121,6 +128,28 @@ const translations = {
       review: '评价',
       refund: '申请退款',
       list: '我的订单',
+      bookingInfo: '预约信息',
+      selectTimePlaceholder: '请选择时间段',
+      contactInfo: '对接信息',
+      contactId: '微信号/手机号',
+      contactPlaceholder: '用于客服拉群和线下对接',
+      addressPlaceholder: '请选择或填写服务地址',
+      addressDetail: '详细地址',
+      addressDetailPlaceholder: '门牌号、包间号等（选填）',
+      remarkPlaceholder: '特殊要求（选填）',
+      billingSummary: '费用明细',
+      platformFee: '平台服务费',
+      companionIncome: '助教收入',
+      total: '合计',
+      totalLabel: '合计：',
+      payNow: '立即支付',
+      safeNotice: '支付资金由平台担保，服务完成并核销后再结算给助教。',
+      selectServiceTime: '选择服务时间',
+      slotFull: '不可预约',
+      slotOpen: '可预约',
+      selectAvailableTime: '请选择可预约时间',
+      enterContact: '请填写微信号或手机号',
+      enterAddress: '请填写服务地址',
       status: {
         '10': '待付款',
         '20': '待拉群',
@@ -150,7 +179,8 @@ const translations = {
       actionConfirm: '确认服务完成',
       actionCancel: '取消订单',
       actionReview: '评价订单',
-      actionRefund: '申请退款'
+      actionRefund: '申请退款',
+      confirmCompleteDesc: '确认服务已经完成了吗？确认后平台将进入结算流程。'
     },
     companion: {
       listTitle: '助教大厅',
@@ -218,7 +248,8 @@ const translations = {
       requestSuccess: '需求發佈成功，系統已同步至客服。是否立即聯繫客服拉群對接？',
       contactForRequest: '聯繫客服拉群',
       contactForRequestContent: '確認聯繫專屬企微客服協助建群對接嗎？',
-      contactJump: '正在跳轉客服拉群'
+      contactJump: '正在跳轉客服拉群',
+      goToLobby: '去大廳逛逛'
     },
     detail: {
       voiceIntro: '真人語音介紹',
@@ -273,7 +304,13 @@ const translations = {
       profile: '個人資料',
       mockLogin: '模擬登入中...',
       loginSuccess: '登入成功',
-      mockLoginSuccess: '本地 Mock 登入成功'
+      mockLoginSuccess: '本地 Mock 登入成功',
+      uploading: '上傳中...',
+      uploadFailed: '上傳失敗',
+      avatarUpdated: '頭像已更新',
+      logout: '登出',
+      logoutConfirm: '確定要登出嗎？',
+      loggedOut: '已登出'
     },
     order: {
       create: '確認訂單',
@@ -282,6 +319,28 @@ const translations = {
       review: '評價',
       refund: '申請退款',
       list: '我的訂單',
+      bookingInfo: '預約資訊',
+      selectTimePlaceholder: '請選擇時間段',
+      contactInfo: '對接資訊',
+      contactId: '微信號/手機號',
+      contactPlaceholder: '用於客服拉群和線下對接',
+      addressPlaceholder: '請選擇或填寫服務地址',
+      addressDetail: '詳細地址',
+      addressDetailPlaceholder: '門牌號、包廂號等（選填）',
+      remarkPlaceholder: '特殊要求（選填）',
+      billingSummary: '費用明細',
+      platformFee: '平台服務費',
+      companionIncome: '助教收入',
+      total: '合計',
+      totalLabel: '合計：',
+      payNow: '立即支付',
+      safeNotice: '支付資金由平台擔保，服務完成並核銷後再結算給助教。',
+      selectServiceTime: '選擇服務時間',
+      slotFull: '不可預約',
+      slotOpen: '可預約',
+      selectAvailableTime: '請選擇可預約時間',
+      enterContact: '請填寫微信號或手機號',
+      enterAddress: '請填寫服務地址',
       status: {
         '10': '待付款',
         '20': '待拉群',
@@ -311,7 +370,8 @@ const translations = {
       actionConfirm: '確認服務完成',
       actionCancel: '取消訂單',
       actionReview: '評價訂單',
-      actionRefund: '申請退款'
+      actionRefund: '申請退款',
+      confirmCompleteDesc: '確認服務已經完成了嗎？確認後平台將進入結算流程。'
     },
     companion: {
       listTitle: '助教大廳',
@@ -379,7 +439,8 @@ const translations = {
       requestSuccess: 'Request posted and synced to support. Contact support now?',
       contactForRequest: 'Contact Support',
       contactForRequestContent: 'Confirm contacting support to coordinate this request?',
-      contactJump: 'Opening support'
+      contactJump: 'Opening support',
+      goToLobby: 'Go to Lobby'
     },
     detail: {
       voiceIntro: 'Voice Intro',
@@ -434,7 +495,13 @@ const translations = {
       profile: 'Profile',
       mockLogin: 'Mock login...',
       loginSuccess: 'Logged in',
-      mockLoginSuccess: 'Local mock login completed'
+      mockLoginSuccess: 'Local mock login completed',
+      uploading: 'Uploading...',
+      uploadFailed: 'Upload failed',
+      avatarUpdated: 'Avatar updated',
+      logout: 'Log Out',
+      logoutConfirm: 'Are you sure you want to log out?',
+      loggedOut: 'Logged out'
     },
     order: {
       create: 'Checkout',
@@ -443,6 +510,28 @@ const translations = {
       review: 'Review',
       refund: 'Refund',
       list: 'My Bookings',
+      bookingInfo: 'Booking Info',
+      selectTimePlaceholder: 'Select Date & Time',
+      contactInfo: 'Contact & Address',
+      contactId: 'WeChat / Phone ID',
+      contactPlaceholder: 'For group chat coordination',
+      addressPlaceholder: 'Enter service location',
+      addressDetail: 'Room / Door No. (Optional)',
+      addressDetailPlaceholder: 'Door no, room no, etc. (Optional)',
+      remarkPlaceholder: 'Special requirements (Optional)',
+      billingSummary: 'Billing Summary',
+      platformFee: 'Platform Fee',
+      companionIncome: 'Companion Income',
+      total: 'Total',
+      totalLabel: 'Total:',
+      payNow: 'Pay Now',
+      safeNotice: 'Payment is escrowed by platform until service confirmation.',
+      selectServiceTime: 'Select Service Time',
+      slotFull: 'Full',
+      slotOpen: 'Open',
+      selectAvailableTime: 'Select available time slot',
+      enterContact: 'Please enter WeChat or Phone',
+      enterAddress: 'Please enter service location',
       status: {
         '10': 'Unpaid',
         '20': 'Pending Group',
@@ -472,7 +561,8 @@ const translations = {
       actionConfirm: 'Confirm Completed',
       actionCancel: 'Cancel Booking',
       actionReview: 'Leave Review',
-      actionRefund: 'Request Refund'
+      actionRefund: 'Request Refund',
+      confirmCompleteDesc: 'Are you sure this service is completed? The platform will enter settlement process.'
     },
     companion: {
       listTitle: 'Companions',
@@ -528,7 +618,8 @@ export const applyLocaleToNativeUi = () => {
   tabBarItems.forEach((item) => {
     uni.setTabBarItem({
       index: item.index,
-      text: translate(locale, item.textKey)
+      text: translate(locale, item.textKey),
+      fail: () => {}
     });
   });
 
@@ -536,6 +627,9 @@ export const applyLocaleToNativeUi = () => {
   const currentPage = pages[pages.length - 1];
   const titleKey = currentPage?.route ? pageRouteTitleKeys[currentPage.route] : '';
   if (titleKey) {
-    uni.setNavigationBarTitle({ title: translate(locale, titleKey) });
+    uni.setNavigationBarTitle({ 
+      title: translate(locale, titleKey),
+      fail: () => {}
+    });
   }
 };

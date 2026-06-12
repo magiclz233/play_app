@@ -1,5 +1,5 @@
 <template>
-  <view class="container" v-if="companion">
+  <view class="container" v-if="companion" :style="appStore.themeStyle">
     <!-- 顶部返回键 -->
     <view class="back-btn" :style="{ top: (statusBarHeight + 10) + 'px' }" @click="goBack" aria-label="返回">
       <text class="back-icon">‹</text>
@@ -152,11 +152,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import { onLoad } from '@dcloudio/uni-app';
-import {request} from '../../utils/request';
-import {useAppStore} from '../../store/app';
-import {t} from '../../utils/i18n';
+import { request } from '../../utils/request';
+import { useAppStore } from '../../store/app';
+import { t } from '../../utils/i18n';
 
 const appStore = useAppStore();
 const companion = ref<any>(null);

@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container" :style="appStore.themeStyle">
     <view class="tabs">
       <view class="tab" :class="{ active: currentTab === '' }" @click="switchTab('')" hover-class="tab-hover">
         {{ t('mine.allOrders') }}
@@ -50,7 +50,7 @@
         </view>
       </view>
 
-      <EmptyState v-else-if="!loading" :text="t('lobby.emptyRequests')" actionText="去大厅逛逛" @action="goToLobby" />
+      <EmptyState v-else-if="!loading" :text="t('lobby.emptyRequests')" :actionText="t('lobby.goToLobby')" @action="goToLobby" />
 
       <view class="loading-state" v-if="loading && orderList.length > 0">
         <text>{{ t('common.loading') }}</text>
@@ -150,7 +150,7 @@ const goToPay = (item: any) => {
 const confirmOrder = (orderNo: string) => {
   uni.showModal({
     title: t('order.actionConfirm'),
-    content: appStore.locale === 'en' ? 'Are you sure this service is completed?' : '确认服务已经完成了吗？确认后平台将进入结算流程。',
+    content: t('order.confirmCompleteDesc'),
     confirmText: t('common.confirm'),
     cancelText: t('common.cancel'),
     success: async (res) => {

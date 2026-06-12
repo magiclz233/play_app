@@ -24,6 +24,8 @@ public class User implements Serializable {
 
     private String openid;
     private String unionid;
+    private String username;
+    private String passwordHash;
     private String phone;
     private String nickname;
     private String avatarUrl;

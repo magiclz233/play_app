@@ -2,6 +2,7 @@ package com.playapp.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.entity.WithdrawalRecord;
 import com.playapp.mapper.WithdrawalRecordMapper;
@@ -19,6 +20,8 @@ public class AdminWalletController {
 
     private final CompanionWalletService companionWalletService;
     private final WithdrawalRecordMapper withdrawalRecordMapper;
+    private final com.playapp.mapper.CompanionWalletMapper companionWalletMapper;
+    private final com.playapp.mapper.WalletTransactionMapper walletTransactionMapper;
 
     /**
      * 获取提现申请列表
@@ -45,6 +48,7 @@ public class AdminWalletController {
      * 审核提现
      */
     @PutMapping("/{id}/audit")
+    @OpLog(module = "WITHDRAWAL", action = "AUDIT", detail = "提现审核: #id")
     public Result<?> auditWithdrawal(@PathVariable Long id, @RequestBody AuditDTO dto) {
         companionWalletService.auditWithdrawal(id, dto.getStatus(), dto.getRemark());
         return Result.success("审核处理成功");
@@ -54,5 +58,30 @@ public class AdminWalletController {
     public static class AuditDTO {
         private Integer status; // 1-通过 2-拒绝
         private String remark;
+    }
+
+    /** 钱包列表 */
+    @GetMapping("/wallets")
+    public Result<Page<com.playapp.entity.CompanionWallet>> getWalletList(
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "20") Integer size) {
+        Page<com.playapp.entity.CompanionWallet> page = new Page<>(current, size);
+        return Result.success(companionWalletMapper.selectPage(page,
+                new LambdaQueryWrapper<com.playapp.entity.CompanionWallet>()
+                        .orderByDesc(com.playapp.entity.CompanionWallet::getCreateTime)));
+    }
+
+    /** 钱包流水 */
+    @GetMapping("/wallets/{walletId}/transactions")
+    public Result<Page<com.playapp.entity.WalletTransaction>> getWalletTransactions(
+            @PathVariable Long walletId,
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "20") Integer size) {
+        Page<com.playapp.entity.WalletTransaction> page = new Page<>(current, size);
+        // walletId 即 companionId (钱包和陪玩一一对应)
+        return Result.success(walletTransactionMapper.selectPage(page,
+                new LambdaQueryWrapper<com.playapp.entity.WalletTransaction>()
+                        .eq(com.playapp.entity.WalletTransaction::getCompanionId, walletId)
+                        .orderByDesc(com.playapp.entity.WalletTransaction::getCreateTime)));
     }
 }

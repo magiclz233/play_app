@@ -2,6 +2,7 @@ package com.playapp.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.entity.CompanionProfile;
 import com.playapp.service.CompanionProfileService;
@@ -39,6 +40,7 @@ public class AdminCompanionController {
      */
     @PutMapping("/{id}/audit")
     @PreAuthorize("hasRole('ADMIN')")
+    @OpLog(module = "COMPANION", action = "AUDIT", detail = "助教审核: #id")
     public Result<?> audit(@PathVariable Long id, @RequestBody AuditRequest req) {
         companionProfileService.auditApplication(id, req.getIsPass(), req.getRejectReason());
         return Result.success("审核操作成功");
@@ -48,5 +50,34 @@ public class AdminCompanionController {
     public static class AuditRequest {
         private Boolean isPass;
         private String rejectReason;
+    }
+
+    /**
+     * 全量助教列表（含分页与筛选）
+     */
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public Result<Page<CompanionProfile>> getAllList(
+            @RequestParam(defaultValue = "1") Integer current,
+            @RequestParam(defaultValue = "20") Integer size,
+            @RequestParam(required = false) Integer auditStatus,
+            @RequestParam(required = false) Integer status,
+            @RequestParam(required = false) String keyword) {
+
+        Page<CompanionProfile> page = new Page<>(current, size);
+        LambdaQueryWrapper<CompanionProfile> wrapper = new LambdaQueryWrapper<>();
+        if (auditStatus != null) {
+            wrapper.eq(CompanionProfile::getAuditStatus, auditStatus);
+        }
+        if (status != null) {
+            wrapper.eq(CompanionProfile::getStatus, status);
+        }
+        if (keyword != null && !keyword.isBlank()) {
+            wrapper.and(w -> w.like(CompanionProfile::getNickname, keyword)
+                    .or().like(CompanionProfile::getRealName, keyword));
+        }
+        wrapper.orderByDesc(CompanionProfile::getCreateTime);
+
+        return Result.success(companionProfileService.page(page, wrapper));
     }
 }

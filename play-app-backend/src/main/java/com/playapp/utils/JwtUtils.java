@@ -12,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -33,13 +34,13 @@ public class JwtUtils {
     }
 
     /**
-     * 生成 token
+     * 生成 token（支持多角色）
      */
-    public String generateToken(Long userId, String openid, Integer role) {
+    public String generateToken(Long userId, String openid, List<Integer> roles) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("openid", openid);
-        claims.put("role", role);
+        claims.put("roles", roles);
 
         return Jwts.builder()
                 .claims(claims)
@@ -48,6 +49,13 @@ public class JwtUtils {
                 .expiration(new Date(System.currentTimeMillis() + expiration))
                 .signWith(getSigningKey())
                 .compact();
+    }
+
+    /**
+     * 生成 token（单角色，向后兼容）
+     */
+    public String generateToken(Long userId, String openid, Integer role) {
+        return generateToken(userId, openid, List.of(role));
     }
 
     /**

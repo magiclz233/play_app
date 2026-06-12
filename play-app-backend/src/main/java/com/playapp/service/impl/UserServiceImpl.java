@@ -8,8 +8,10 @@ import com.playapp.common.BusinessException;
 import com.playapp.common.ErrorCode;
 import com.playapp.entity.CompanionProfile;
 import com.playapp.entity.User;
+import com.playapp.entity.UserRole;
 import com.playapp.mapper.CompanionProfileMapper;
 import com.playapp.mapper.UserMapper;
+import com.playapp.mapper.UserRoleMapper;
 import com.playapp.service.UserService;
 import com.playapp.utils.JwtUtils;
 import com.playapp.vo.LoginVO;
@@ -20,7 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -31,6 +36,52 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     private final JwtUtils jwtUtils;
     private final StringRedisTemplate redisTemplate;
     private final CompanionProfileMapper companionProfileMapper;
+    private final UserRoleMapper userRoleMapper;
+
+    /**
+     * 从 user_roles 表和现有硬编码逻辑综合获取用户角色列表
+     */
+    private List<Integer> resolveUserRoles(User user, String phone) {
+        // 1. 首选从 user_roles 表查询（数据库驱动的 RBAC）
+        List<UserRole> userRoles = userRoleMapper.selectList(
+                new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, user.getId()));
+        if (userRoles != null && !userRoles.isEmpty()) {
+            return userRoles.stream()
+                    .map(UserRole::getRoleId)
+                    .distinct()
+                    .collect(Collectors.toList());
+        }
+
+        // 2. 回退：兼容旧逻辑，根据业务规则自动分配角色
+        List<Integer> roles = new ArrayList<>();
+        roles.add(1); // 默认客户
+
+        // 检查是否为认证陪玩
+        CompanionProfile companion = companionProfileMapper.selectById(user.getId());
+        if (companion != null && companion.getAuditStatus() == 1) {
+            roles.add(2); // 认证陪玩
+        }
+
+        // 检查是否为管理员（硬编码手机号兜底，后续通过 user_roles 表管理）
+        if ("admin".equals(phone) || "13800000000".equals(phone)) {
+            roles.add(3); // 管理员
+        }
+
+        // 3. 同步写入 user_roles 表（自动升级为 DB 驱动）
+        List<UserRole> toSave = roles.stream()
+                .map(rid -> { UserRole ur = new UserRole(); ur.setUserId(user.getId()); ur.setRoleId(rid); return ur; })
+                .collect(Collectors.toList());
+        for (UserRole ur : toSave) {
+            // 避免重复插入
+            if (userRoleMapper.selectCount(new LambdaQueryWrapper<UserRole>()
+                    .eq(UserRole::getUserId, ur.getUserId())
+                    .eq(UserRole::getRoleId, ur.getRoleId())) == 0) {
+                userRoleMapper.insert(ur);
+            }
+        }
+
+        return roles;
+    }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -62,19 +113,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 this.updateById(user);
             }
 
-            // 4. 判断角色：检查是否为已认证陪玩
-            Integer role = 1; // 默认客户
-            CompanionProfile companion = companionProfileMapper.selectById(user.getId());
-            if (companion != null && companion.getAuditStatus() == 1) {
-                role = 2; // 认证陪玩
-            }
-            // 管理员判断：phone 为特定号码（后续可改DB查询）
-            if ("admin".equals(user.getPhone()) || "13800000000".equals(user.getPhone())) {
-                role = 3;
-            }
+            // 4. 综合判断角色（优先 user_roles 表，回退业务规则）
+            List<Integer> roles = resolveUserRoles(user, user.getPhone());
 
-            // 5. 生成 JWT Token
-            String token = jwtUtils.generateToken(user.getId(), openid, role);
+            // 5. 生成 JWT Token（多角色）
+            String token = jwtUtils.generateToken(user.getId(), openid, roles);
 
             // 6. 将 Token 存入 Redis，实现单点登录/踢出机制 (有效期1天)
             redisTemplate.opsForValue().set("token:" + user.getId(), token, 1, TimeUnit.DAYS);
@@ -115,14 +158,10 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             this.updateById(user);
         }
 
-        // 也可以查一下是否是管理员或者助教，这里先给默认1 (客户)
-        Integer role = 1;
-        // 如果想测试管理员，可以写死某个手机号是管理员，例如：
-        if ("admin".equals(phone) || "13800000000".equals(phone)) {
-            role = 0; // 假设0是ADMIN
-        }
+        // 综合判断角色（优先 user_roles 表，回退业务规则）
+        List<Integer> roles = resolveUserRoles(user, phone);
 
-        String token = jwtUtils.generateToken(user.getId(), mockOpenid, role);
+        String token = jwtUtils.generateToken(user.getId(), mockOpenid, roles);
         redisTemplate.opsForValue().set("token:" + user.getId(), token, 1, TimeUnit.DAYS);
 
         return LoginVO.builder()

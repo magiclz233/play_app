@@ -17,10 +17,17 @@
 * **认证**：Spring Security（无状态 JWT + 过滤器）
 * **微信 SDK**：WxJava（`wx-java-miniapp-spring-boot-starter` & `wx-java-pay-spring-boot-starter` 4.6.0）
 
-### 前端
+### 前端（小程序）
 * **框架**：uni-app（Vue 3 + Vite + TypeScript）
 * **目标平台**：微信小程序（mp-weixin）
 * **样式方案**：原生 CSS（模块化设计体系，配置于 `uni.scss`）
+
+### 前端（PC Web 管理端）
+* **框架**：Vue 3 + Vite + TypeScript
+* **UI 库**：Element Plus
+* **状态管理**：Pinia
+* **路由**：Vue Router 4
+* **构建产物**：SPA 静态文件（部署至 Nginx 或后端静态资源目录）
 
 ---
 
@@ -46,6 +53,7 @@ play_app/
 │   │   └── application-dev_1.yml  # 本地开发配置（数据库密码、Redis）
 │   └── pom.xml                    # Maven 构建文件
 │
+├── play-app-admin/               # PC Web 管理端（Vue 3 + Element Plus）
 └── play-app-frontend/             # uni-app 前端根目录
 ```
 
@@ -70,12 +78,29 @@ play_app/
 | URL 前缀 | 是否需要认证 | 说明 |
 |---------|------------|------|
 | `/api/wx/*` | 否（permitAll） | 微信登录、支付回调 |
+| `/api/public/**` | 否（permitAll） | 公开的主题配置等 |
 | `/api/companions/**` | 否（permitAll） | 公开的助教列表和详情 |
 | `/api/admin/**` | 是，需要 `ROLE_ADMIN` | 管理后台接口 |
 | 其余所有路径 | 是（需认证） | 订单、用户信息、助教申请、文件上传 |
 
 ### 控制器层管理员双重保护
 Admin 控制器在类级别额外添加 `@PreAuthorize("hasRole('ADMIN')")` 注解，与 URL 守卫形成双重校验。
+
+### RBAC 角色与权限体系（v2 升级）
+* **数据表**：`roles`、`permissions`、`user_roles`、`role_permissions` 四张关联表
+* **角色分配优先级**：
+  1. 首选从 `user_roles` 表查询（DB 驱动）
+  2. 若 `user_roles` 无记录，回退到业务规则自动分配（默认客户=1，认证陪玩=2，管理员手机号=3）
+  3. 首次回退分配时自动同步写入 `user_roles` 表（渐进式升级）
+* **JWT 多角色支持**：Token 中 `roles` 字段存储角色 ID 列表，`JwtAuthenticationFilter` 将其转换为多个 `SimpleGrantedAuthority`
+* **管理 API 路径**：
+  * `GET/POST/PUT/DELETE /api/admin/roles` — 角色 CRUD
+  * `PUT /api/admin/roles/{id}/permissions` — 分配权限
+  * `GET /api/admin/permissions` — 权限树
+  * `GET/PUT /api/admin/users/{id}/roles` — 用户角色管理
+* **PC Web 认证**：
+  * `POST /api/auth/login` — 账号密码登录（permitAll）
+  * `GET /api/auth/me` — 当前用户信息（含角色+权限列表）
 
 ---
 
@@ -348,3 +373,8 @@ play-app-frontend/src/theme/
 * 安装依赖：`npm install`
 * 开发构建：`npm run dev:mp-weixin`
 * 生产构建：`npm run build:mp-weixin`
+
+### PC Web 管理端命令（在 `play-app-admin` 目录下执行）
+* 安装依赖：`npm install`
+* 开发运行：`npm run dev`（端口 5173，代理 /api → localhost:8080）
+* 生产构建：`npm run build`（产出至 dist/ 目录）

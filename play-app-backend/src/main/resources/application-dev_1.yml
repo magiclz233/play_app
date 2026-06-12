@@ -1,3 +1,7 @@
+# Flyway 数据库迁移开关
+flyway:
+  enabled: false
+
 spring:
   # 数据库连接配置 (PostgreSQL)
   datasource:

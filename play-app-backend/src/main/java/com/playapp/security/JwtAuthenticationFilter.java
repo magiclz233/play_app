@@ -22,7 +22,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * JWT 认证过滤器
@@ -55,10 +56,23 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                     return;
                 }
 
-                // 这里为了简化 MVP，将 roleId 转换为 Role GrantedAuthority
-                String roleName = getRoleName(roleId);
+                // 将 roleId 列表转换为 Spring Security GrantedAuthority 集合
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                // 优先读取 roles 列表（多角色），回退到单 role（向后兼容）
+                List<?> rolesList = claims.get("roles", List.class);
+                if (rolesList != null && !rolesList.isEmpty()) {
+                    for (Object r : rolesList) {
+                        Integer rid = r instanceof Integer ? (Integer) r : Integer.valueOf(r.toString());
+                        authorities.add(new SimpleGrantedAuthority(getRoleName(rid)));
+                    }
+                } else if (roleId != null) {
+                    // 向后兼容旧 token（单角色）
+                    authorities.add(new SimpleGrantedAuthority(getRoleName(roleId)));
+                } else {
+                    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                }
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
-                        userId, null, Collections.singletonList(new SimpleGrantedAuthority(roleName)));
+                        userId, null, authorities);
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);

@@ -1,5 +1,5 @@
 <template>
-  <view class="container">
+  <view class="container" :style="appStore.themeStyle">
     <!-- 顶部状态栏占位 -->
     <view class="status-bar" :style="{ height: statusBarHeight + 'px' }"></view>
 
@@ -198,8 +198,10 @@
 import {ref, onMounted, onUnmounted, computed} from 'vue';
 import {request} from '../../utils/request';
 import {t} from '../../utils/i18n';
+import {useAppStore} from '../../store/app';
 import EmptyState from '../../components/EmptyState.vue';
 
+const appStore = useAppStore();
 const statusBarHeight = ref(uni.getSystemInfoSync().statusBarHeight || 20);
 const currentCity = ref('杭州市');
 const activeTab = ref<'recommend' | 'requests'>('recommend');

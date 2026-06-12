@@ -1,9 +1,9 @@
 <template>
-  <view class="container">
+  <view class="container" :style="appStore.themeStyle">
     <view class="header-bg"></view>
 
-    <!-- ===== 用户信息卡片 ===== -->
-    <view class="user-card" v-if="userInfo">
+    <!-- ===== 用户信息展示 ===== -->
+    <view class="user-profile" v-if="userInfo">
       <image :src="userInfo.avatarUrl || defaultAvatar" mode="aspectFill" class="avatar" @click="uploadAvatar"></image>
       <view class="info">
         <view class="nickname">
@@ -13,7 +13,7 @@
         <view class="phone">{{ userInfo.phone ? formatPhone(userInfo.phone) : t('mine.unboundPhone') }}</view>
       </view>
     </view>
-    <view class="user-card not-login" v-else @click="login">
+    <view class="user-profile not-login" v-else @click="login">
       <image :src="defaultAvatar" mode="aspectFill" class="avatar"></image>
       <view class="info">
         <view class="nickname">{{ t('mine.clickLogin') }}</view>
@@ -79,6 +79,18 @@
           </view>
           <view class="right">
             <text class="tip" v-if="!isCompanion">{{ t('lobby.postBtn') }}</text>
+            <text class="arrow">›</text>
+          </view>
+        </view>
+        <view class="list-item admin-entry" @click="goToAdmin" v-if="userStore.isAdmin">
+          <view class="left">
+            <text class="entry-icon" style="background: rgba(16, 185, 129, 0.1); color: var(--color-success);">管</text>
+            <view>
+              <text class="label">管理后台</text>
+              <text class="sub">平台运营与审核</text>
+            </view>
+          </view>
+          <view class="right">
             <text class="arrow">›</text>
           </view>
         </view>
@@ -175,8 +187,8 @@
       </button>
     </view>
 
-    <view class="logout-box" v-if="userInfo">
-      <button class="logout-btn" @click="doLogout">退出登录</button>
+    <view class="menu-card logout-card" v-if="userInfo">
+      <button class="logout-btn" @click="doLogout" hover-class="button-hover">{{ t('mine.logout') }}</button>
     </view>
   </view>
 </template>
@@ -278,7 +290,7 @@ const uploadAvatar = () => {
   uni.chooseImage({
     count: 1,
     success: async (res: any) => {
-      uni.showLoading({ title: '上传中...' });
+      uni.showLoading({ title: t('mine.uploading') });
       try {
         const uploadRes = await uni.uploadFile({
           url: 'http://127.0.0.1:8080/api/file/upload',
@@ -289,9 +301,9 @@ const uploadAvatar = () => {
         if (data.code === 200) {
           await request({ url: '/user/profile', method: 'PUT', data: { avatarUrl: data.data } });
           userInfo.value.avatarUrl = data.data;
-          uni.showToast({ title: '头像已更新', icon: 'success' });
+          uni.showToast({ title: t('mine.avatarUpdated'), icon: 'success' });
         }
-      } catch (_) { uni.showToast({ title: '上传失败', icon: 'none' }); }
+      } catch (_) { uni.showToast({ title: t('mine.uploadFailed'), icon: 'none' }); }
       finally { uni.hideLoading(); }
     }
   });
@@ -299,14 +311,14 @@ const uploadAvatar = () => {
 
 const doLogout = () => {
   uni.showModal({
-    title: '退出登录',
-    content: '确定要退出登录吗？',
+    title: t('mine.logout'),
+    content: t('mine.logoutConfirm'),
     success: (r: any) => {
       if (r.confirm) {
         userStore.logout();
         userInfo.value = null;
         isCompanion.value = false;
-        uni.showToast({ title: '已退出', icon: 'success' });
+        uni.showToast({ title: t('mine.loggedOut'), icon: 'success' });
       }
     }
   });
@@ -351,6 +363,7 @@ const goToCompanion = () => {
 const goToCompanionOrders = () => uni.navigateTo({ url: '/pages/companion/dashboard' });
 const goToWallet = () => uni.navigateTo({ url: '/pages/companion/wallet' });
 const goToCompanionProfile = () => uni.navigateTo({ url: '/pages/companion/apply' });
+const goToAdmin = () => uni.navigateTo({ url: '/pages/admin/index' });
 
 const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2');
 </script>
@@ -374,8 +387,8 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   z-index: 0;
 }
 
-// ===== 用户卡片 =====
-.user-card {
+// ===== 用户信息区 =====
+.user-profile {
   position: relative;
   z-index: 1;
   display: flex;
@@ -383,10 +396,11 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   padding: 60rpx 40rpx 30rpx;
 
   .avatar {
-    width: 100rpx; height: 100rpx;
+    width: 120rpx; height: 120rpx;
     border-radius: 50%;
-    border: 4rpx solid var(--bg-card);
-    margin-right: 24rpx;
+    border: 4rpx solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.1);
+    margin-right: 30rpx;
     flex-shrink: 0;
   }
 
@@ -569,6 +583,7 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   border-bottom: 1rpx solid var(--border-color);
   background: transparent;
   width: 100%;
+  box-sizing: border-box;
   border-radius: 0;
   margin: 0;
   line-height: 1.6;
@@ -578,6 +593,8 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
 
   .left {
     display: flex; align-items: center; gap: 20rpx;
+    flex: 1; /* 让左侧占据更多空间，避免挤压右侧 */
+    min-width: 0; /* 防止子元素撑破 flex 容器 */
     .entry-icon {
       display: inline-flex;
       align-items: center;
@@ -598,6 +615,7 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
 
   .right {
     display: flex; align-items: center;
+    flex-shrink: 0; /* 防止右侧被挤压 */
     .tip { font-size: 22rpx; color: var(--color-primary); margin-right: 8rpx; }
   }
 
@@ -619,6 +637,26 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   border-bottom: none;
 }
 
+.logout-card {
+  background-color: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  margin-bottom: 60rpx !important;
+
+  .logout-btn {
+    width: 100%;
+    height: 96rpx;
+    line-height: 96rpx;
+    background-color: var(--bg-card);
+    color: var(--color-error);
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--border-color);
+    font-size: var(--font-size-base);
+    box-shadow: var(--shadow-card);
+  }
+}
+
 .companion-entry {
   background: linear-gradient(135deg, var(--color-primary-light), rgba(var(--color-primary-rgb), 0.05));
   border-radius: var(--radius-md);
@@ -626,9 +664,7 @@ const formatPhone = (phone: string) => phone.replace(/(\d{3})\d{4}(\d{4})/, '$1*
   margin-bottom: 4rpx;
   border-bottom: none;
   border: 1px solid rgba(var(--color-primary-rgb), 0.15);
-
-  .logout-box { padding: 40rpx 30rpx; }
-  .logout-btn { width: 100%; height: 88rpx; line-height: 88rpx; background: $bg-color-white; color: var(--color-error); border-radius: $border-radius-md; border: 1px solid var(--color-error); font-size: $font-size-base; }
+  box-sizing: border-box;
 
   .theme-dark & {
     background: linear-gradient(135deg, rgba(var(--color-primary-rgb), 0.15), rgba(var(--color-primary-rgb), 0.06));

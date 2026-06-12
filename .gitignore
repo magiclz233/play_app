@@ -33,15 +33,22 @@ play-app-backend/logs/
 !play-app-backend/.mvn/
 
 # ==============================
-# Node / Frontend
+# Node / Frontend (Mini Program)
 # ==============================
 play-app-frontend/node_modules/
 play-app-frontend/dist/
 play-app-frontend/.uni/
 play-app-frontend/unpackage/
 
-# pnpm
-play-app-frontend/.pnpm-store/
+# ==============================
+# Node / Frontend (PC Web Admin)
+# ==============================
+play-app-admin/node_modules/
+play-app-admin/dist/
+
+# pnpm / yarn / npm
+*.pnpm-store/
+.yarn/
 
 # ==============================
 # Environment & Secrets
@@ -71,4 +78,5 @@ play-app-backend/uploads/
 # ==============================
 .claude/
 .agent/
+.codex/
 logs/

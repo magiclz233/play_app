@@ -1,6 +1,7 @@
 package com.playapp.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.playapp.common.OpLog;
 import com.playapp.common.Result;
 import com.playapp.entity.Tag;
 import com.playapp.mapper.TagMapper;
@@ -27,6 +28,7 @@ public class AdminTagController {
 
     /** 创建标签 */
     @PostMapping
+    @OpLog(module = "CONTENT", action = "CREATE", detail = "创建标签")
     public Result<Tag> createTag(@RequestBody Tag tag) {
         tagMapper.insert(tag);
         return Result.success(tag);
@@ -34,6 +36,7 @@ public class AdminTagController {
 
     /** 修改标签 */
     @PutMapping("/{id}")
+    @OpLog(module = "CONTENT", action = "UPDATE", detail = "更新标签: #id")
     public Result<?> updateTag(@PathVariable Integer id, @RequestBody Tag tag) {
         tag.setId(id);
         tagMapper.updateById(tag);
@@ -42,6 +45,7 @@ public class AdminTagController {
 
     /** 删除标签（软删除） */
     @DeleteMapping("/{id}")
+    @OpLog(module = "CONTENT", action = "DELETE", detail = "删除标签: #id")
     public Result<?> deleteTag(@PathVariable Integer id) {
         Tag tag = tagMapper.selectById(id);
         if (tag != null) {
